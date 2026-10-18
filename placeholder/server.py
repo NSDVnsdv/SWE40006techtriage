@@ -6,6 +6,15 @@ before the real Flask app exists. Level 3 replaces this file and the
 Dockerfile with the real application.
 
 Standard library only, so the image needs no pip install.
+
+Level 2 (monitoring) adds:
+- One JSON access-log line per request on stdout, e.g.
+  {"type": "access", "method": "GET", "path": "/", "status": 200, "duration_ms": 1.42}
+  On Production, Docker ships stdout to CloudWatch Logs and metric filters
+  turn these lines into request count, latency and 5xx metrics. The Level 3
+  Gunicorn app must keep this same log format so the metrics keep working.
+- Two test-only routes, /_fault/500 and /_fault/slow?ms=N, used to prove the
+  5xx and latency alarms fire. They return 404 unless FAULT_INJECTION=1.
 """
 
 import html
@@ -13,11 +22,16 @@ import json
 import os
 import signal
 import sys
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qs
 
 APP_ENV = os.environ.get("APP_ENV", "unknown")
 APP_VERSION = os.environ.get("APP_VERSION", "unknown")
 PORT = int(os.environ.get("PORT", "8000"))
+# Off unless the server's .env sets FAULT_INJECTION=1 (alarm testing only).
+FAULT_INJECTION = os.environ.get("FAULT_INJECTION", "0") == "1"
+SLOW_MAX_MS = 3000
 
 # One colour per environment so screenshots are easy to tell apart.
 ENV_COLOURS = {
@@ -69,8 +83,20 @@ class Handler(BaseHTTPRequestHandler):
     server_version = "TechTriagePlaceholder"
 
     def do_GET(self):
-        path = self.path.split("?", 1)[0]
-        if path == "/":
+        self._started = time.perf_counter()
+        path, _, query = self.path.partition("?")
+        self._path = path
+        if FAULT_INJECTION and path == "/_fault/500":
+            self._json(500, {"error": "simulated server error (FAULT_INJECTION=1)"})
+        elif FAULT_INJECTION and path == "/_fault/slow":
+            try:
+                ms = int(parse_qs(query).get("ms", ["800"])[0])
+            except ValueError:
+                ms = 800
+            ms = max(0, min(ms, SLOW_MAX_MS))
+            time.sleep(ms / 1000)
+            self._json(200, {"status": "ok", "slept_ms": ms})
+        elif path == "/":
             self._send(200, "text/html; charset=utf-8", PAGE.format(
                 env=html.escape(APP_ENV),
                 version=html.escape(APP_VERSION),
@@ -95,6 +121,21 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(data)
+        self._access_log(status)
+
+    def _access_log(self, status):
+        duration_ms = (time.perf_counter() - self._started) * 1000
+        print(json.dumps({
+            "type": "access",
+            "method": self.command,
+            "path": self._path,
+            "status": status,
+            "duration_ms": round(duration_ms, 2),
+        }), flush=True)
+
+    def log_message(self, format, *args):
+        # Replace the default plain-text stderr log with the JSON line above.
+        pass
 
 
 def main():
@@ -102,7 +143,14 @@ def main():
     # would make every `docker compose down` wait 10 seconds.
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
     server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
-    print(f"TechTriage placeholder: env={APP_ENV} version={APP_VERSION} port={PORT}", flush=True)
+    print(json.dumps({
+        "type": "startup",
+        "message": "TechTriage placeholder started",
+        "environment": APP_ENV,
+        "version": APP_VERSION,
+        "port": PORT,
+        "fault_injection": FAULT_INJECTION,
+    }), flush=True)
     server.serve_forever()
 
 
