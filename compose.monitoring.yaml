@@ -1,0 +1,22 @@
+# Production-only additions for Level 2 (monitoring). Not used locally or on
+# the other servers. Production's /opt/techtriage/.env switches it on with:
+#   COMPOSE_FILE=compose.yaml:compose.monitoring.yaml
+#
+# - Sends the app container's stdout (one JSON line per request) straight to
+#   CloudWatch Logs, using the server's instance role (no keys on the server).
+# - Passes FAULT_INJECTION through, so the test-only /_fault routes can be
+#   switched on for alarm testing and off again (default off).
+services:
+  app:
+    environment:
+      FAULT_INJECTION: ${FAULT_INJECTION:-0}
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION:-us-east-1}
+        awslogs-group: /techtriage/${APP_ENV}/app
+        awslogs-stream: ${APP_ENV}-app
+        awslogs-create-group: "true"
+        # Never let a CloudWatch hiccup block or crash the app.
+        mode: non-blocking
+        max-buffer-size: 4m

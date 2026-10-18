@@ -3,9 +3,10 @@
 Student technical troubleshooting assistant, deployed through a four-environment
 DevOps pipeline. SWE40006 Software Deployment and Evolution, Group 05 (CL03 Wed 16:30).
 
-> **Current state: Level 1 (pipeline infrastructure).** Every server runs a
+> **Current state: Level 2 (Production monitoring).** Every server runs a
 > placeholder page that shows its environment name and the commit it was built
-> from. The real TechTriage app arrives in Level 3.
+> from. Production is monitored with CloudWatch (dashboard, 7 alarms, SNS email
+> alerts). The real TechTriage app arrives in Level 3.
 
 ## How the pipeline fits together
 
@@ -109,10 +110,13 @@ GHCR_OWNER=local APP_ENV=development docker compose down
 | `Dockerfile` | Placeholder image (Python stdlib server). **Replaced in Level 3** by Flask + Gunicorn. |
 | `placeholder/server.py` | Placeholder page, `/health`, `/version`. **Deleted in Level 3.** |
 | `compose.yaml` | Service definition used on every server. **Level 3 adds** the PostgreSQL `db` service and named volume. |
+| `compose.monitoring.yaml` | Production only (switched on by `COMPOSE_FILE` in its `.env`): app logs to CloudWatch Logs, `FAULT_INJECTION` flag. |
+| `monitoring/` | Level 2: CloudWatch Agent config, Production scripts (`prod-*.sh`, `alarm-test-prod.sh`) and CloudShell scripts (`cw-*.sh`, `alarm-test-cloudshell.sh`). |
 | `server-setup.sh` | EC2 user data: installs Docker + Compose, writes `/opt/techtriage/.env`, starts the app. |
 | `.github/workflows/ci.yml` | Build and publish to GHCR. Level 3 adds tests; Level 4 adds deploy jobs. |
 | `scripts/create-issues.sh` | Creates the level labels and Level 1 issues (GitHub CLI). |
 | `docs/LEVEL1-STEPS.md` | Level 1 runbook: every step, what to screenshot. |
+| `docs/LEVEL2-STEPS.md` | Level 2 runbook: monitoring, alarms, alarm tests, what to screenshot. |
 | `docs/error-log.md` | What broke, what we tried, what fixed it (for the final report). |
 
 ## What Level 3 changes
@@ -124,3 +128,14 @@ GHCR_OWNER=local APP_ENV=development docker compose down
    `compose.yaml`, on the private network only. Do **not** publish port 5432.
 4. Keep `/health` and `/version`, with `/health` returning 200 only when the
    database answers.
+5. Keep the Level 2 **access-log format**: one JSON line per request on stdout
+   with at least `"type": "access"`, `"path"`, `"status"` and `"duration_ms"`
+   (Gunicorn `--access-logformat`), and keep `/_fault/500` + `/_fault/slow`
+   behind `FAULT_INJECTION=1`. The CloudWatch metric filters and alarms
+   depend on both.
+
+## Monitoring (Level 2)
+
+Production only. Dashboard: CloudWatch -> Dashboards -> **TechTriage-Production**.
+Alarms (`techtriage-prod-*`) email the team through the SNS topic
+`techtriage-production-alerts`. Full steps: [docs/LEVEL2-STEPS.md](docs/LEVEL2-STEPS.md).
