@@ -1,0 +1,5 @@
+# Keep LF line endings so shell scripts and YAML work on Linux servers
+# even when edited on Windows.
+* text=auto eol=lf
+*.png binary
+*.jpg binary

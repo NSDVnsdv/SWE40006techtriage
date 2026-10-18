@@ -1,0 +1,23 @@
+# Runs on every EC2 server from /opt/techtriage, with a per-server .env file:
+#   APP_ENV=development|testing|staging|production
+#   GHCR_OWNER=<github owner, lowercase>
+#   IMAGE_TAG=latest | <commit sha>
+#
+# Level 3 adds the PostgreSQL "db" service here (private network only,
+# port 5432 NOT published) and a named volume for its data.
+name: techtriage
+
+services:
+  app:
+    image: ghcr.io/${GHCR_OWNER:?set GHCR_OWNER in .env}/swe40006techtriage:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-80}:8000"
+    environment:
+      APP_ENV: ${APP_ENV:?set APP_ENV in .env}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
