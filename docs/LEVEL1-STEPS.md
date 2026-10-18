@@ -37,11 +37,11 @@ Legend: `[x]` done, `[ ]` to do.
 | First green CI run URL | https://github.com/NSDVnsdv/SWE40006techtriage/actions/runs/39086794887 |
 | GHCR image | `ghcr.io/nsdvnsdv/swe40006techtriage:latest` |
 | AWS region | `us-east-1` |
-| Security group ID | `sg-...` |
-| development instance ID / IP | |
-| testing instance ID / IP | |
-| staging instance ID / IP | |
-| production instance ID / Elastic IP | |
+| Security group ID | `sg-0da56f70824eae8e2` |
+| development instance ID / IP | `i-04b3b7b74fa92f322` / 35.175.115.88 |
+| testing instance ID / IP | `i-0297da3eacd2c0f10` / 44.192.103.214 |
+| staging instance ID / IP | `i-0da2d24c792889a0a` / 44.204.123.137 |
+| production instance ID / Elastic IP | `i-05fa5eb69c835d120` / 3.232.71.71 (`eipalloc-06955e51c6a1628a9`) |
 
 ---
 
@@ -213,8 +213,16 @@ On AWS Academy Learner Lab: **Start Lab** -> wait for the green dot -> click
 **AWS**. Set the region (top right) to **N. Virginia (us-east-1)** and keep it
 there for every step.
 
+> **Progress (18 Oct 2026):** steps 12-21 were done with the AWS CLI on the
+> Learner Lab account, using the settings below. Text evidence for each step is
+> saved locally in `SWE40006\evidence\level-1\` (not in this public repo).
+> Budgets turned out to be allowed on this account. The step 19 checks ran
+> through Systems Manager Run Command; still take the console screenshots marked
+> `[ ]` below (security group, instance list, Fleet Manager, one Session Manager
+> terminal per server, each page in the browser).
+
 ### Step 12: Budget alert
-- [ ] **Billing and Cost Management** -> **Budgets** -> **Create budget** ->
+- [x] **Billing and Cost Management** -> **Budgets** -> **Create budget** ->
       **Use a template** -> **Monthly cost budget**
   - Name: `techtriage-monthly`, amount: `20` (USD)
   - Email recipients: all four team emails
@@ -232,7 +240,7 @@ there for every step.
 - [ ] Screenshot the role/profile and its permissions (this is the "IAM policy" evidence for 8.2).
 
 ### Step 14: Security group `techtriage-web`
-- [ ] **EC2** -> **Security Groups** -> **Create security group**
+- [x] **EC2** -> **Security Groups** -> **Create security group**
   - Name: `techtriage-web`
   - Description: `TechTriage web - HTTP 80 only`
   - VPC: the default VPC
@@ -265,35 +273,35 @@ ENV_NAME="development"     # change per server (table above)
 
 Then **EC2** -> **Instances** -> **Launch instances**:
 
-- [ ] **Name and tags:** Name = `techtriage-<env>` -> **Add additional tags** ->
+- [x] **Name and tags:** Name = `techtriage-<env>` -> **Add additional tags** ->
       Key `Environment`, Value `<env>`
-- [ ] **AMI:** Amazon Linux 2023 (the default, 64-bit x86)
-- [ ] **Instance type:** `t3.micro`
-- [ ] **Key pair:** **Proceed without a key pair**
-- [ ] **Network settings** -> **Edit**:
+- [x] **AMI:** Amazon Linux 2023 (the default, 64-bit x86)
+- [x] **Instance type:** `t3.micro`
+- [x] **Key pair:** **Proceed without a key pair**
+- [x] **Network settings** -> **Edit**:
   - Auto-assign public IP: **Enable**
   - Firewall: **Select existing security group** -> `techtriage-web`
-- [ ] **Storage:** leave the default (8 GiB gp3)
-- [ ] **Advanced details**:
+- [x] **Storage:** leave the default (8 GiB gp3)
+- [x] **Advanced details**:
   - **IAM instance profile:** `LabInstanceProfile` (Learner Lab) or `techtriage-ec2-ssm`
   - **User data:** paste your edited `server-setup.sh`
-- [ ] **Launch instance**
+- [x] **Launch instance**
 
 Repeat for testing, staging and production, changing **only** the Name tag,
 Environment tag and `ENV_NAME`.
 
 ### Step 16: Wait for them to come up
-- [ ] Instance state **Running** and status checks **2/2 passed** (newer consoles show 3/3).
-- [ ] Allow another 2-3 minutes after that for the user data to finish
+- [x] Instance state **Running** and status checks **2/2 passed** (newer consoles show 3/3).
+- [x] Allow another 2-3 minutes after that for the user data to finish
       installing Docker and starting the app.
 - [ ] Screenshot the instance list with the **Name** and **Environment** tags
       visible. Use the gear icon to add the `Environment` tag column.
 
 ### Step 17: Elastic IP for Production (recommended)
-- [ ] **EC2** -> **Elastic IPs** -> **Allocate Elastic IP address** -> **Allocate**
-- [ ] Select it -> **Actions** -> **Associate Elastic IP address** -> Instance:
+- [x] **EC2** -> **Elastic IPs** -> **Allocate Elastic IP address** -> **Allocate**
+- [x] Select it -> **Actions** -> **Associate Elastic IP address** -> Instance:
       `techtriage-production` -> **Associate**
-- [ ] Production's address is now the Elastic IP for good (Level 2's uptime
+- [x] Production's address is now the Elastic IP for good (Level 2's uptime
       check needs this). Record it.
 - An Elastic IP is billed while the instance is stopped too. Release it at the
   end of the project.
@@ -303,7 +311,7 @@ Environment tag and `ENV_NAME`.
 ## G. Prove everything connects
 
 ### Step 18: Fleet Manager
-- [ ] **Systems Manager** -> **Fleet Manager** (left menu) -> all 4 servers
+- [x] **Systems Manager** -> **Fleet Manager** (left menu) -> all 4 servers
       listed with ping status **Online**.
 - If one is missing after about 10 minutes: EC2 -> select it -> **Actions** ->
   **Security** -> **Modify IAM role** -> attach the profile -> **Instance state**
@@ -326,14 +334,14 @@ tail -n 5 /var/log/techtriage-setup.log
 - [ ] Screenshot and copy the output for **each** of the 4 servers.
 
 ### Step 20: Each placeholder page in the browser
-- [ ] Open `http://<public IP>` for each server. Type `http://` yourself,
+- [x] Open `http://<public IP>` for each server. Type `http://` yourself,
       because the page has no HTTPS. Each page has its own colour:
       development blue, testing amber, staging purple, production green.
-- [ ] Also open `http://<public IP>/version`.
+- [x] Also open `http://<public IP>/version`.
 - [ ] Screenshot all 4 (with the address bar visible).
 
 ### Step 21: Match the commit ID
-- [ ] Compare these three; they must be identical:
+- [x] Compare these three; they must be identical:
   1. The **Commit (SHA)** on each server's page
   2. The commit in the green Actions run for `main` (step 6 Summary)
   3. `git rev-parse origin/main` on your machine

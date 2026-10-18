@@ -35,10 +35,10 @@ feature/* branch -> pull request -> develop -> main
 
 | Environment | Instance ID | Address | Page |
 |---|---|---|---|
-| development | `i-...` | `...` (changes on stop/start) | http://.../ |
-| testing | `i-...` | `...` (changes on stop/start) | http://.../ |
-| staging | `i-...` | `...` (changes on stop/start) | http://.../ |
-| production | `i-...` | `...` (Elastic IP, fixed) | http://.../ |
+| development | `i-04b3b7b74fa92f322` | `35.175.115.88` (changes on stop/start) | http://35.175.115.88/ |
+| testing | `i-0297da3eacd2c0f10` | `44.192.103.214` (changes on stop/start) | http://44.192.103.214/ |
+| staging | `i-0da2d24c792889a0a` | `44.204.123.137` (changes on stop/start) | http://44.204.123.137/ |
+| production | `i-05fa5eb69c835d120` | `3.232.71.71` (Elastic IP, fixed) | http://3.232.71.71/ |
 
 All four are Amazon Linux 2023, `t3.micro`, no key pair, no SSH. Development,
 Testing and Staging are stopped when not in use, so check the EC2 console for
