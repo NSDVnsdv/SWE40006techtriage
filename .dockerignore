@@ -7,3 +7,5 @@ scripts
 *.md
 __pycache__
 .venv
+monitoring
+compose.monitoring.yaml
