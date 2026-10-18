@@ -38,9 +38,9 @@ Legend: `[x]` done, `[ ]` to do.
 | GHCR image | `ghcr.io/nsdvnsdv/swe40006techtriage:latest` |
 | AWS region | `us-east-1` |
 | Security group ID | `sg-0da56f70824eae8e2` |
-| development instance ID / IP | `i-04b3b7b74fa92f322` / 35.175.115.88 |
-| testing instance ID / IP | `i-0297da3eacd2c0f10` / 44.192.103.214 |
-| staging instance ID / IP | `i-0da2d24c792889a0a` / 44.204.123.137 |
+| development instance ID / IP | `i-04b3b7b74fa92f322` / 98.92.203.138 |
+| testing instance ID / IP | `i-0297da3eacd2c0f10` / 18.234.184.80 |
+| staging instance ID / IP | `i-0da2d24c792889a0a` / 3.235.10.40 |
 | production instance ID / Elastic IP | `i-05fa5eb69c835d120` / 3.232.71.71 (`eipalloc-06955e51c6a1628a9`) |
 
 ---

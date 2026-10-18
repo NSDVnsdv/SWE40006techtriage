@@ -35,9 +35,9 @@ feature/* branch -> pull request -> develop -> main
 
 | Environment | Instance ID | Address | Page |
 |---|---|---|---|
-| development | `i-04b3b7b74fa92f322` | `35.175.115.88` (changes on stop/start) | http://35.175.115.88/ |
-| testing | `i-0297da3eacd2c0f10` | `44.192.103.214` (changes on stop/start) | http://44.192.103.214/ |
-| staging | `i-0da2d24c792889a0a` | `44.204.123.137` (changes on stop/start) | http://44.204.123.137/ |
+| development | `i-04b3b7b74fa92f322` | `98.92.203.138` (changes on stop/start) | http://98.92.203.138/ |
+| testing | `i-0297da3eacd2c0f10` | `18.234.184.80` (changes on stop/start) | http://18.234.184.80/ |
+| staging | `i-0da2d24c792889a0a` | `3.235.10.40` (changes on stop/start) | http://3.235.10.40/ |
 | production | `i-05fa5eb69c835d120` | `3.232.71.71` (Elastic IP, fixed) | http://3.232.71.71/ |
 
 All four are Amazon Linux 2023, `t3.micro`, no key pair, no SSH. Development,
