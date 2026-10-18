@@ -25,7 +25,7 @@ Legend: `[x]` done, `[ ]` to do.
 - [x] `server-setup.sh` install steps tested in an `amazonlinux:2023`
       container: Docker 25.0.14 + Docker Compose v2.40.3 install and work
 - [x] Local git repo: `main` with the initial commit, `develop` branched from it.
-      **Nothing has been pushed to GitHub yet.**
+      Pushed to GitHub on 18 Oct 2026: `main` and `develop` at `357ee49`.
 
 ## Record sheet (fill in as you go)
 
@@ -33,8 +33,8 @@ Legend: `[x]` done, `[ ]` to do.
 |---|---|
 | GitHub owner (username or org) | `NSDVnsdv` |
 | Repo URL | https://github.com/NSDVnsdv/SWE40006techtriage |
-| Commit SHA on `main` (`git rev-parse main`) | |
-| First green CI run URL | |
+| Commit SHA on `main` (`git rev-parse main`) | `357ee492c4c2515baf604e61eb9e17255aa7a9a1` |
+| First green CI run URL | https://github.com/NSDVnsdv/SWE40006techtriage/actions/runs/39086794887 |
 | GHCR image | `ghcr.io/nsdvnsdv/swe40006techtriage:latest` |
 | AWS region | `us-east-1` |
 | Security group ID | `sg-...` |
@@ -65,7 +65,7 @@ Legend: `[x]` done, `[ ]` to do.
   - Visibility: **Public**
   - Do **NOT** tick "Add a README", ".gitignore" or "licence". The repo must be
     empty or the first push will be rejected.
-- [ ] **Create repository**. Write the owner in the record sheet.
+- [x] **Create repository**. Write the owner in the record sheet.
 - [ ] Recommended: GitHub -> Settings -> **Emails** -> add
       `104681360@student.swin.au.edu` (the email your local git commits use),
       so commits count on your profile as contribution evidence.
@@ -86,7 +86,7 @@ git push -u origin main
 
 - [ ] If a browser window asks you to sign in to GitHub, do it (Git Credential
       Manager). GitHub no longer accepts account passwords on the command line.
-- [ ] Push **only `main`** first, so `main` becomes the default branch and the
+- [x] Push **only `main`** first, so `main` becomes the default branch and the
       first CI run publishes the `:latest` image.
 
 ### Step 5: Create `develop`
@@ -96,7 +96,7 @@ git push -u origin main
 git push -u origin develop
 ```
 
-- [ ] Check the repo's branch dropdown shows `main` and `develop`.
+- [x] Check the repo's branch dropdown shows `main` and `develop`.
       Team rule from now on: `feature/...` -> PR into `develop` -> release PR
       `develop` -> `main`.
 
@@ -105,7 +105,7 @@ git push -u origin develop
 ## C. CI/build server (GitHub Actions)
 
 ### Step 6: Watch the first run go green
-- [ ] Repo -> **Actions** tab -> the **CI** run for `main` -> wait for the
+- [x] Repo -> **Actions** tab -> the **CI** run for `main` -> wait for the
       green tick (usually 1-2 minutes).
 - [ ] Open the run -> **build** job. The **Summary** page shows the commit SHA
       and the tags pushed (`...:<sha>` and `...:latest`).
@@ -115,10 +115,10 @@ git push -u origin develop
 ### Step 7: Make the GHCR package public
 - [ ] Your avatar (top right) -> **Your profile** -> **Packages** tab ->
       **swe40006techtriage**. For an org repo it's the org's **Packages** tab.
-- [ ] **Package settings** (bottom of right sidebar) -> **Danger Zone** ->
+- [x] **Package settings** (bottom of right sidebar) -> **Danger Zone** ->
       **Change visibility** -> **Public** -> type `swe40006techtriage` -> confirm.
-      It may already be **Public** (packages from a public repo usually take
-      its visibility). If so, there is nothing to change: just screenshot the
+      Checked 18 Oct: it is **already Public** (it took the repo's
+      visibility) and an anonymous `docker pull` works. Just screenshot the
       package page showing "Public".
 - [ ] Still in Package settings, check **Manage Actions access** lists the
       `SWE40006techtriage` repo (it is linked automatically by the image label).
@@ -139,7 +139,7 @@ docker pull ghcr.io/nsdvnsdv/swe40006techtriage:latest
 ### Step 8: Protect `main` and `develop`
 The `build` check only appears in the list after it has run once (step 6).
 
-- [ ] Repo -> **Settings** -> **Branches** -> **Add classic branch protection rule**
+- [x] Repo -> **Settings** -> **Branches** -> **Add classic branch protection rule**
   - Branch name pattern: `main`
   - [x] **Require a pull request before merging** -> Required approvals: **1**
   - [x] **Require status checks to pass before merging** -> search `build` -> select it
