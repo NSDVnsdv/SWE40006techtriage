@@ -11,9 +11,10 @@ delivers it through four separate servers (Development, Testing, Staging, Produc
 
 SWE40006 Software Deployment and Evolution, Group 05 (CL03 Wed 16:30).
 
-> **Current state: Level 3 complete.** All four servers run the real TechTriage app with its
-> own database, delivered by the pipeline. Live site: **http://3.232.71.71** (Production).
-> Level 4 (full automation from one push) is in progress.
+> **Current state: Level 4 (full automation).** One merge sets off the whole chain: the image
+> is built once and goes to Testing (Playwright), then Staging (smoke tests), then waits for one
+> **Approve** click before Production. A failed Production `/health` check rolls back by itself.
+> Live site: **http://3.232.71.71** (Production).
 
 ---
 
@@ -196,7 +197,24 @@ unreliable tests ([evidence](docs/evidence/)).
 | File | When it runs | What it does |
 |---|---|---|
 | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | Every push and pull request | `test` job (lint, rule check, unit + integration tests, coverage gates, saves the reports), then `build` job (Docker image tagged with the commit ID, uploaded to GHCR; `latest` also moves on `main`; pull requests only build, never upload) |
-| [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) | When someone presses **Run workflow** (and from Level 4's automation) | Updates one server to one image through AWS Systems Manager, waits for `/health`, then runs the Playwright or smoke tests against it |
+| [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) | Called by `ci.yml` after every merge, or by **Run workflow** (backup plan) | Updates one server to one image through AWS Systems Manager, waits for `/health`, rolls Production back if it fails, then runs the Playwright or smoke tests against it |
+
+### Continuous deployment (Level 4)
+
+| Merge into | What happens automatically |
+|---|---|
+| `develop` | test, build (tag = commit ID, uploaded to GHCR), deploy to **Development**, `/health`, smoke tests |
+| `main` | test, build **once**, **Testing** + Playwright, **Staging** + smoke tests, *waits for Approve*, **Production** + smoke tests |
+
+- **Approval gate:** the `production` GitHub environment has required reviewers and only accepts `main`.
+- **One release at a time:** `deploy.yml` has a concurrency group per server, so a second release
+  waits until the first has completely finished.
+- **Automatic rollback:** before each deploy the server saves `.env` and the compose files as
+  `*.previous` ([`scripts/server-deploy.sh`](scripts/server-deploy.sh)). If Production's `/health`
+  fails, [`scripts/server-rollback.sh`](scripts/server-rollback.sh) puts them back and `/health` is checked again.
+- **Kept with every run (30 days):** `test-reports` (JUnit + coverage), `image-digest`,
+  `<env>-deploy-log`, `<env>-test-reports` (Playwright traces on Testing) and `pipeline-report`
+  (Table 7 timings, digest check and CI success rate, from [`scripts/pipeline-report.sh`](scripts/pipeline-report.sh)).
 
 ## Deploying a version to a server
 
@@ -255,6 +273,7 @@ uptime. The 7 alarms (`techtriage-prod-*`) email the team through the SNS topic
 | `pyproject.toml` | Test and coverage settings |
 | `tests/` | The unit, integration, browser and smoke tests |
 | `.github/workflows/` | The CI and Deploy pipelines |
+| `scripts/` | Level 4 helpers: Systems Manager runner, server deploy and rollback scripts, `/health` wait, pipeline timings report |
 | `server-setup.sh` | Sets up a brand-new EC2 server on its first start (Level 1) |
 | `monitoring/` | CloudWatch set-up and alarm-test scripts (Level 2) |
 | `docs/` | Step-by-step runbooks for each level, the error log and test evidence |
