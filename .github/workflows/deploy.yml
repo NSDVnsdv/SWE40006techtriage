@@ -1,8 +1,9 @@
 # Below is the code to name this workflow "Deploy", which is how it appears in the GitHub Actions tab.
 name: Deploy
 
-# Below is the code to start a deploy with the "Run workflow" button (pick a server and an image),
-# or from another workflow, which is how Level 4 will deploy automatically.
+# Below is the code to start a deploy in two ways:
+#  - the "Run workflow" button (pick a server and an image), which is the brief's manual backup plan, and
+#  - from the CI workflow, which is how Level 4 deploys automatically after every merge.
 on:
   workflow_dispatch:
     inputs:
@@ -23,32 +24,51 @@ on:
       image_tag:
         type: string
         required: true
+      expected_digest:
+        description: Digest the CI build produced, used to prove every server runs the same image
+        type: string
+        required: false
+        default: ""
+    outputs:
+      url:
+        value: ${{ jobs.deploy.outputs.url }}
+      digest:
+        value: ${{ jobs.deploy.outputs.digest }}
 
 # Below is the code to let this workflow only read the code. It never changes the repository.
 permissions:
   contents: read
 
-# Below is the code to allow only one deploy at a time to each server. A second deploy waits for the first to finish.
+# Below is the code to allow only one deploy at a time to each server. If two releases reach Production
+# together, the second one waits until the first has completely finished (it is never cancelled half-way).
 concurrency:
-  group: deploy-${{ inputs.environment }}
+  group: techtriage-deploy-${{ inputs.environment }}
   cancel-in-progress: false
 
 jobs:
   # Below is the code to run the "deploy" job: update the chosen server to the chosen image through AWS Systems Manager,
-  # then wait until the server's /health check says the database is connected.
+  # wait until /health says the database is connected and, on Production, roll back automatically if it never does.
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     environment:
       name: ${{ inputs.environment }}
       url: ${{ steps.address.outputs.url }}
     outputs:
       url: ${{ steps.address.outputs.url }}
+      digest: ${{ steps.deploy.outputs.digest }}
+    defaults:
+      run:
+        shell: bash
     env:
       INSTANCE_ID: ${{ vars.INSTANCE_ID }}
       IMAGE_TAG: ${{ inputs.image_tag }}
       TARGET_ENV: ${{ inputs.environment }}
     steps:
+      # Below is the code to download the repository's code (it holds the deploy and rollback scripts) onto GitHub's machine.
+      - name: Check out code
+        uses: actions/checkout@v4
+
       # Below is the code to stop straight away if the image is not a full 40-character commit ID,
       # or if this environment has no INSTANCE_ID saved in its GitHub settings.
       - name: Check the inputs
@@ -77,65 +97,65 @@ jobs:
           echo "url=http://$ip" >> "$GITHUB_OUTPUT"
           echo "$TARGET_ENV server $INSTANCE_ID is at http://$ip"
 
-      # Below is the code to send the deploy commands to the server through Systems Manager (no SSH needed),
-      # wait for them to finish, and print everything the server printed.
+      # Below is the code to send scripts/server-deploy.sh to the server through Systems Manager and print what it printed.
+      # It also reads the running image's digest from the output and compares it with the one CI built.
       - name: Deploy with Systems Manager
-        run: |
-          script=$(printf 'REPO=%s\nTAG=%s\n' "$GITHUB_REPOSITORY" "$IMAGE_TAG"; cat <<'SCRIPT'
-          # Below is the code to stop at the first error and work in the folder holding the server's compose files and .env.
-          set -euo pipefail
-          cd /opt/techtriage
-          # Below is the code to download the compose files from the exact commit being deployed (Production also gets its monitoring add-on).
-          raw="https://raw.githubusercontent.com/$REPO/$TAG"
-          curl -fsSL "$raw/compose.yaml" -o compose.yaml
-          if grep -q '^COMPOSE_FILE=.*compose.monitoring.yaml' .env; then curl -fsSL "$raw/compose.monitoring.yaml" -o compose.monitoring.yaml; fi
-          # Below is the code to refuse to deploy if this server has no database password in its .env yet.
-          grep -q '^DB_PASSWORD=.' .env || { echo "DB_PASSWORD is missing from /opt/techtriage/.env"; exit 1; }
-          # Below is the code to print the image that was running before, then switch .env to the new image.
-          echo "Previous image: $(grep '^IMAGE_TAG=' .env || echo none)"
-          if grep -q '^IMAGE_TAG=' .env; then sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=$TAG|" .env; else echo "IMAGE_TAG=$TAG" >> .env; fi
-          # Below is the code to point the server at the image store of whoever owns the repo now, in lowercase as GHCR needs,
-          # because image addresses include the owner's name (the repo moved from NSDVnsdv to TylerMarwood).
-          owner=$(echo "${REPO%%/*}" | tr '[:upper:]' '[:lower:]')
-          if grep -q '^GHCR_OWNER=' .env; then sed -i "s|^GHCR_OWNER=.*|GHCR_OWNER=$owner|" .env; else echo "GHCR_OWNER=$owner" >> .env; fi
-          # Below is the code to download only the new app image (the PostgreSQL image is kept), restart with it and show the result.
-          docker compose pull app
-          docker compose up -d
-          sleep 10
-          docker compose ps
-          SCRIPT
-          )
-          params=$(jq -n --arg script "$script" '{commands: ($script | split("\n"))}')
-          id=$(aws ssm send-command --instance-ids "$INSTANCE_ID" --document-name AWS-RunShellScript \
-            --comment "TechTriage deploy ${IMAGE_TAG:0:7} to $TARGET_ENV" --parameters "$params" \
-            --query Command.CommandId --output text)
-          echo "Systems Manager command ID: $id"
-          for _ in $(seq 1 60); do
-            sleep 5
-            status=$(aws ssm get-command-invocation --command-id "$id" --instance-id "$INSTANCE_ID" \
-              --query Status --output text 2>/dev/null || echo Pending)
-            case "$status" in Pending|InProgress|Delayed) continue ;; *) break ;; esac
-          done
-          echo "----- output from the $TARGET_ENV server -----"
-          aws ssm get-command-invocation --command-id "$id" --instance-id "$INSTANCE_ID" \
-            --query '[StandardOutputContent, StandardErrorContent]' --output text
-          echo "----- Systems Manager status: $status -----"
-          [ "$status" = Success ]
-
-      # Below is the code to check the deploy worked: call /health every 10 seconds, for up to 3 minutes,
-      # until it answers with "database": "connected".
-      - name: Wait for /health
+        id: deploy
         env:
-          URL: ${{ steps.address.outputs.url }}
+          EXPECTED_DIGEST: ${{ inputs.expected_digest }}
         run: |
-          for attempt in $(seq 1 18); do
-            body=$(curl -s --max-time 5 "$URL/health" || true)
-            echo "attempt $attempt: ${body:-no answer yet}"
-            if echo "$body" | grep -q '"database": *"connected"'; then exit 0; fi
-            sleep 10
-          done
-          echo "::error::$URL/health never reported the database as connected"
-          exit 1
+          { printf 'REPO=%s\nTAG=%s\n' "$GITHUB_REPOSITORY" "$IMAGE_TAG"; cat scripts/server-deploy.sh; } > deploy-script.sh
+          echo "Deploy started at $(date -u +%H:%M:%S) UTC"
+          bash scripts/ssm-run.sh "$INSTANCE_ID" "TechTriage deploy ${IMAGE_TAG:0:7} to $TARGET_ENV" deploy-script.sh | tee deploy-output.txt
+          digest=$(grep -o 'RUNNING_DIGEST=sha256:[0-9a-f]*' deploy-output.txt | head -1 | cut -d= -f2 || true)
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "Running image digest: ${digest:-unknown}"
+          if [ -n "$EXPECTED_DIGEST" ] && [ "$digest" != "$EXPECTED_DIGEST" ]; then
+            echo "::warning::$TARGET_ENV runs digest $digest but CI built $EXPECTED_DIGEST"
+          fi
+
+      # Below is the code to check the deploy worked: /health must report the database as connected within 3 minutes.
+      - name: Wait for /health
+        run: bash scripts/wait-for-health.sh "${{ steps.address.outputs.url }}"
+
+      # Below is the code to roll back AUTOMATICALLY, on Production only, when the deploy or its /health check failed:
+      # put the previous working image back, then check /health again. The run still shows as failed (red).
+      - name: Automatic rollback (Production only)
+        id: rollback
+        if: failure() && inputs.environment == 'production' && steps.deploy.outcome != 'skipped'
+        run: |
+          echo "::warning::Production failed its /health check. Rolling back to the previous image."
+          echo "Rollback started at $(date -u +%H:%M:%S) UTC"
+          bash scripts/ssm-run.sh "$INSTANCE_ID" "TechTriage ROLLBACK on production" scripts/server-rollback.sh | tee rollback-output.txt
+          bash scripts/wait-for-health.sh "${{ steps.address.outputs.url }}"
+          echo "Rollback finished, Production healthy again at $(date -u +%H:%M:%S) UTC"
+          echo "### :rewind: Automatic rollback ran on Production and /health is OK again" >> "$GITHUB_STEP_SUMMARY"
+
+      # Below is the code to write the server, image and digest on the run's Summary page.
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Deploy to $TARGET_ENV"
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Server | ${{ steps.address.outputs.url }} |"
+            echo "| Image (commit) | \`$IMAGE_TAG\` |"
+            echo "| Running digest | \`${{ steps.deploy.outputs.digest }}\` |"
+            echo "| Rollback | ${{ steps.rollback.outcome }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Below is the code to save the server's deploy (and any rollback) output with the run, as evidence.
+      - name: Save deploy log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.environment }}-deploy-log
+          path: |
+            deploy-output.txt
+            rollback-output.txt
+          if-no-files-found: ignore
+          retention-days: 30
 
   # Below is the code to run the "verify" job after a successful deploy: the Playwright browser tests on Testing,
   # or the 2 smoke tests on every other server, against the server that was just updated.
@@ -170,19 +190,19 @@ jobs:
         run: python -m playwright install --with-deps chromium
 
       # Below is the code to run the Playwright browser tests against the Testing server,
-      # keeping a trace (a step-by-step recording) of any test that fails.
+      # keeping a trace (a step-by-step recording) of every test so it can be replayed later.
       - name: Playwright browser tests
         if: inputs.environment == 'testing'
         run: >-
           python -m pytest tests/test_e2e.py --base-url "$BASE_URL"
-          --tracing retain-on-failure --output reports/playwright-traces --junitxml=reports/e2e-junit.xml
+          --tracing on --output reports/playwright-traces --junitxml=reports/e2e-junit.xml
 
       # Below is the code to run the 2 smoke tests (database connected, expected commit) on every other server.
       - name: Smoke tests
         if: inputs.environment != 'testing'
         run: python -m pytest tests/test_smoke.py --base-url "$BASE_URL" --junitxml=reports/smoke-junit.xml
 
-      # Below is the code to save the test reports, and any Playwright traces, with the run.
+      # Below is the code to save the test reports, and the Playwright traces, with the run.
       - name: Save test reports
         if: always()
         uses: actions/upload-artifact@v4
