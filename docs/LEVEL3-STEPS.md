@@ -193,3 +193,66 @@ Save as `L3-<nn>-<name>.png` with the matching text as `.txt`.
 | Deploy fails at "Find the server's address": "no public address" | The server is stopped. Start it in EC2 (its address changes, the workflow finds the new one) |
 | Systems Manager status not `Success` | Read the printed server output. "DB_PASSWORD is missing" means step C3 was not done on that server |
 | `/health` returns 503 "unreachable" | The database container is down: `docker compose ps` and `docker compose logs db` on that server |
+
+---
+
+## Hand-over to Level 4
+
+What Level 4 can build on, and what is already done.
+
+**CI (`ci.yml`)**: runs on every push and pull request. `test` (lint, rule check, unit +
+integration tests, coverage gates, `test-reports` artifact), then `build` (needs `test`):
+image tagged with the full commit SHA, plus `latest` on `main`. Pull requests build but never
+push. The run's Summary page shows the commit, tags and the **image digest**.
+
+**Deploy (`deploy.yml`)**: inputs `environment` and `image_tag` (full 40-character SHA). It
+already supports `workflow_call`, so CI can call it directly:
+
+```yaml
+  deploy-testing:
+    needs: build
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: testing
+      image_tag: ${{ github.sha }}
+    secrets: inherit
+```
+
+It already has:
+
+- **one deploy at a time per server** (`concurrency: deploy-<environment>`, queued, never cancelled), which covers "two releases can never deploy to Production at the same time"
+- the deploy job runs **inside the GitHub environment**, so a required reviewer on `production` makes it wait for an **Approve** click with no workflow change
+- the server prints `Previous image: IMAGE_TAG=<sha>` before switching, and `/version` always shows the running SHA, which gives the commit to roll back to
+- a `verify` job (Playwright on testing, smoke tests elsewhere) that saves `<environment>-test-reports`, including Playwright traces when a test fails
+
+**Level 4 tasks mapped to what exists**
+
+| Level 4 task | Status / what is left |
+|---|---|
+| Merge to `develop` deploys Development | Add a job in `ci.yml` that calls `deploy.yml` with `environment: development` on pushes to `develop` |
+| Merge to `main`: build once, Testing + Playwright, Staging + smoke, wait, Production | Chain calls to `deploy.yml` (`needs:`) on pushes to `main`, all with `image_tag: ${{ github.sha }}` |
+| Approval gate | Repo owner: Settings -> Environments -> production -> Required reviewers |
+| Concurrency | Done (per environment) |
+| Automatic rollback | Read Production's `/version` before deploying; if the Production deploy fails, call `deploy.yml` again with that SHA |
+| Artifacts: test reports, coverage, Playwright traces, image digest | Done (CI `test-reports`, deploy `<environment>-test-reports`, digest in the CI Summary) |
+
+**Before every deploy session (and before the demo)**: Learner Lab -> Start Lab, then the repo
+owner re-pastes the 3 AWS secrets (values only). Stopped servers must be started in EC2 first.
+
+**Demo rule**: add this as the last entry of `rules/python.json` (put a comma after the
+previous rule's closing `}`). It passes the rule check and every test (checked: 26 rules,
+78 tests pass), and the Python category then shows 6 symptoms:
+
+```json
+  {
+    "id": "python-06",
+    "category": "Python",
+    "symptom": "Python virtual environment will not activate",
+    "steps": [
+      "On Windows PowerShell run '.venv\\Scripts\\Activate.ps1', on Mac or Linux run 'source .venv/bin/activate'.",
+      "If PowerShell says running scripts is disabled, run 'Set-ExecutionPolicy -Scope CurrentUser RemoteSigned' once, then try again.",
+      "If the .venv folder is missing or broken, delete it and create it again with 'python -m venv .venv'.",
+      "Check it worked: the terminal line now starts with (.venv)."
+    ]
+  }
+```
