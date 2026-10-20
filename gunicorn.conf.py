@@ -1,6 +1,6 @@
 # Below is the code to make Gunicorn (the program that runs the app on the servers) listen on port 8000
 # with 2 worker processes. Two is plenty for our traffic and keeps memory low on the small t3.micro servers.
-bind = "0.0.0.0:8000"
+bind = "0.0.0.0:8001git add gunicorn.conf.py"
 workers = 2
 
 # Below is the code to print one JSON line per request to the screen, including the response time in milliseconds.
