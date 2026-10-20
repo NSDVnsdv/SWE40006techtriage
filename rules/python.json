@@ -52,17 +52,5 @@
       "Newer features, such as the match statement, do not work on older Python versions.",
       "Install the right version and create a fresh virtual environment with it."
     ]
-    },
-  {
-    "id": "python-06",
-    "category": "Python",
-    "symptom": "Python virtual environment will not activate",
-    "steps": [
-      "Check you are in the project folder that contains the .venv folder, using 'dir' (Windows) or 'ls' (Mac).",
-      "On Windows PowerShell, run '.venv\\Scripts\\Activate.ps1'. On Mac or Linux, run 'source .venv/bin/activate'.",
-      "If PowerShell says running scripts is disabled, run 'Set-ExecutionPolicy -Scope CurrentUser RemoteSigned', then try again.",
-      "If the .venv folder is missing or broken, delete it and make a new one with 'python -m venv .venv'.",
-      "In VS Code, press Ctrl+Shift+P, choose 'Python: Select Interpreter' and pick the one inside .venv."
-    ]
   }
 ]
