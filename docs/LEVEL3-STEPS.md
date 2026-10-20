@@ -272,7 +272,7 @@ include the owner's name, so new builds go to `ghcr.io/tylermarwood/swe40006tech
 instead of `ghcr.io/nsdvnsdv/swe40006techtriage`. Because of this:
 
 - The deploy workflow now sets `GHCR_OWNER` on each server to the current repo owner at every deploy, so the servers follow the move automatically
-- **After the first CI build on `main` in the moved repo, the owner must make the new package public once**: GitHub profile -> Packages -> `swe40006techtriage` -> Package settings -> Danger Zone -> Change visibility -> Public. GitHub creates new packages as private, and the servers download without a password
+- The first build after the move (CI run #47) created `ghcr.io/tylermarwood/swe40006techtriage` as **public**, matching the public repo, so the servers can download it without a password. If a deploy ever fails with "unauthorized" or "denied" while pulling, check: GitHub profile -> Packages -> `swe40006techtriage` -> Package settings -> Danger Zone -> Change visibility -> Public
 - Versions built before the move (such as `b2346bb`) exist only under `nsdvnsdv`, so roll back only to versions built after the move
 
 **Demo rule**: add this as the last entry of `rules/python.json` (put a comma after the
