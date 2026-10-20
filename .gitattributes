@@ -1,5 +1,5 @@
-# Keep LF line endings so shell scripts and YAML work on Linux servers
-# even when edited on Windows.
+# Below is the code to keep LF line endings so shell scripts and YAML work on the Linux servers, even when edited on Windows,
+# and to mark images as binary so git never changes them.
 * text=auto eol=lf
 *.png binary
 *.jpg binary

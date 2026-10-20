@@ -1,17 +1,21 @@
 #!/bin/bash
-# Creates the level-1..level-4 labels and one issue per Level 1 section.
-# Needs the GitHub CLI:  winget install --id GitHub.cli -e   then   gh auth login
-# Run from the repo folder in Git Bash:  bash scripts/create-issues.sh
-# Level 2-4 issues are added from their own level files later.
+# Below is the code to create the level-1 to level-4 labels and one GitHub issue per Level 1 section. Needs the GitHub CLI
+# (winget install --id GitHub.cli -e, then gh auth login). Run from the repo folder in Git Bash: bash scripts/create-issues.sh
+
+# Below is the code to stop the script at the first error.
 set -euo pipefail
 
+# Below is the code to create the 4 level labels (or update them if they already exist).
 gh label create level-1 --color 1d76db --description "Level 1: pipeline infrastructure" --force
 gh label create level-2 --color d93f0b --description "Level 2: Production monitoring and alarms" --force
 gh label create level-3 --color 0e8a16 --description "Level 3: TechTriage app, tests, deployment" --force
 gh label create level-4 --color 5319e7 --description "Level 4: full automation and demo" --force
 
+# Below is the code to create one issue with the level-1 label. Its inputs are the title and the checklist text.
 issue() { gh issue create --label level-1 --title "$1" --body "$2"; }
 
+# Below is the code to create the 8 Level 1 issues (A to H), each with a checklist of the steps it covers.
+# Level 2 to 4 issues are added later from their own level files.
 issue "L1-A: Agree names (repo, environments, AWS region)" "Level 1 steps 1.
 - [ ] Repo: SWE40006techtriage (image name: swe40006techtriage)
 - [ ] Environments: development, testing, staging, production
@@ -59,4 +63,5 @@ issue "L1-H: Hand over Level 1" "Level 1 steps 22-24.
 - [ ] Repo link, 4 addresses and README sent to the team
 - [ ] Development, Testing, Staging stopped when idle"
 
+# Below is the code to print where to find the new issues.
 echo "Done. Open the Issues tab and filter by label:level-1."

@@ -1,4 +1,5 @@
-# Secrets - the repo is PUBLIC, never commit these
+# Below is the code to keep secrets out of git, because the repo is PUBLIC: .env files, private keys and AWS credentials
+# (.env.example is allowed, as it holds no real values).
 .env
 .env.*
 !.env.example
@@ -7,14 +8,14 @@
 credentials
 .aws/
 
-# Python
+# Below is the code to ignore Python's cache files and the virtual environment.
 __pycache__/
 *.py[cod]
 .venv/
 venv/
 *.egg-info/
 
-# Test and coverage output
+# Below is the code to ignore test and coverage output made on a PC (the pipeline saves its own copy with each run).
 .pytest_cache/
 .coverage
 coverage.xml
@@ -23,7 +24,7 @@ test-results/
 playwright-report/
 reports/
 
-# Editors and OS
+# Below is the code to ignore editor and operating-system files.
 .vscode/
 .idea/
 .DS_Store
