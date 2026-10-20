@@ -179,3 +179,10 @@ def fault_slow():
     delay_ms = max(0, min(request.args.get("ms", 800, type=int), 3000))
     time.sleep(delay_ms / 1000)
     return {"status": "ok", "slept_ms": delay_ms}
+
+
+# Below is the code to run the app on your own computer with "python app.py" (the servers use Gunicorn instead).
+# It creates the tables, then starts Flask's test server at http://127.0.0.1:5000 and reloads it after code changes.
+if __name__ == "__main__":
+    init_db()
+    app.run(debug=True)
