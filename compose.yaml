@@ -1,23 +1,73 @@
-# Runs on every EC2 server from /opt/techtriage, with a per-server .env file:
-#   APP_ENV=development|testing|staging|production
-#   GHCR_OWNER=<github owner, lowercase>
-#   IMAGE_TAG=latest | <commit sha>
-#
-# Level 3 adds the PostgreSQL "db" service here (private network only,
-# port 5432 NOT published) and a named volume for its data.
+# Below is the code to name this group of containers "techtriage" on every server.
+# The Level 2 scripts rely on this name (the app container is called techtriage-app-1).
 name: techtriage
 
 services:
+  # Below is the code to run the TechTriage app from the image the pipeline built and published on GHCR.
+  # The image owner, version and environment name all come from this server's .env file.
   app:
     image: ghcr.io/${GHCR_OWNER:?set GHCR_OWNER in .env}/swe40006techtriage:${IMAGE_TAG:-latest}
     restart: unless-stopped
+
+    # Below is the code to let visitors in: port 80 on the server is passed to port 8000 inside the container.
     ports:
       - "${HOST_PORT:-80}:8000"
+
+    # Below is the code to give the app its environment name and the database's address and password.
+    # "db" is the database container's name on the private network.
     environment:
       APP_ENV: ${APP_ENV:?set APP_ENV in .env}
+      DATABASE_URL: postgresql://techtriage:${DB_PASSWORD:?set DB_PASSWORD in .env}@db:5432/techtriage
+
+    # Below is the code to start the app only after the database reports that it is ready.
+    depends_on:
+      db:
+        condition: service_healthy
+
+    # Below is the code to have Docker call /health every 30 seconds and mark the app unhealthy
+    # after 3 failures in a row, for example when the database is down.
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 15s
+
+    # Below is the code to connect the app to the private network it shares with the database.
+    networks: [backend]
+
+  # Below is the code to run the database from the official PostgreSQL 17 image on Docker Hub.
+  # It has no "ports" section, so port 5432 is never opened to the internet and only the app can reach it.
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+
+    # Below is the code to create the database and its user the first time it starts,
+    # using the password from this server's .env file.
+    environment:
+      POSTGRES_USER: techtriage
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      POSTGRES_DB: techtriage
+
+    # Below is the code to keep the database files in a named volume, so the saved data survives
+    # when containers are stopped, replaced or updated to a new version.
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+    # Below is the code to check every 5 seconds whether the database is ready (the app waits for this).
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U techtriage -d techtriage"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+    # Below is the code to connect the database to the same private network as the app, and nothing else.
+    networks: [backend]
+
+# Below is the code to create the named volume where the database files are kept on the server's disk.
+volumes:
+  pgdata:
+
+# Below is the code to create the private network the app and database use to talk to each other.
+networks:
+  backend:
