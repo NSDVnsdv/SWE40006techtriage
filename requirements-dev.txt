@@ -1,0 +1,10 @@
+# Below is the code to install everything the app needs, plus the extra tools used only for testing.
+# These are never put in the Docker image, so the image stays small.
+-r requirements.txt
+
+# Below is the code to add the testing tools: pytest runs the tests, pytest-cov measures coverage,
+# pytest-playwright drives a real browser, and ruff checks the code for mistakes (lint).
+pytest==9.1.1
+pytest-cov==7.1.0
+pytest-playwright==0.10.0
+ruff==0.17.1
