@@ -17,7 +17,7 @@ SWE40006 Software Deployment and Evolution, Group 05 (CL03 Wed 16:30).
 
 ---
 
-## The big picture
+## How it works
 
 How one change travels from a developer's computer to the live website:
 
@@ -44,7 +44,7 @@ flowchart LR
     G -.->|"one log line per request (Production only)"| L["CloudWatch Logs"]
 ```
 
-### The journey of one change, step by step
+### How a change reaches Production
 
 1. **Write it.** A team member makes a change on their own computer, on a new
    `feature/...` branch, and runs the app and the tests locally.
@@ -67,7 +67,7 @@ flowchart LR
 
 ---
 
-## The tools, in plain English
+## Tools used
 
 | Tool | What it is | What we use it for |
 |---|---|---|
@@ -92,7 +92,7 @@ flowchart LR
 | **Playwright** | Drives a real web browser automatically, like a robot user | Clicks through the live Testing site after every Testing deploy |
 | **ruff** | A code checker (linter) | Catches mistakes such as unused code before tests even run |
 
-**Words that come up a lot:**
+**Common terms:**
 - **Commit ID (SHA):** a unique 40-character code for one exact version of the code.
 - **Pull request:** a request to add a change to the shared code, with automatic checks and a review.
 - **Container:** a running copy of a Docker image.
