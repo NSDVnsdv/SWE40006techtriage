@@ -94,6 +94,10 @@ jobs:
           # Below is the code to print the image that was running before, then switch .env to the new image.
           echo "Previous image: $(grep '^IMAGE_TAG=' .env || echo none)"
           if grep -q '^IMAGE_TAG=' .env; then sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=$TAG|" .env; else echo "IMAGE_TAG=$TAG" >> .env; fi
+          # Below is the code to point the server at the image store of whoever owns the repo now, in lowercase as GHCR needs,
+          # because image addresses include the owner's name (the repo moved from NSDVnsdv to TylerMarwood).
+          owner=$(echo "${REPO%%/*}" | tr '[:upper:]' '[:lower:]')
+          if grep -q '^GHCR_OWNER=' .env; then sed -i "s|^GHCR_OWNER=.*|GHCR_OWNER=$owner|" .env; else echo "GHCR_OWNER=$owner" >> .env; fi
           # Below is the code to download only the new app image (the PostgreSQL image is kept), restart with it and show the result.
           docker compose pull app
           docker compose up -d
