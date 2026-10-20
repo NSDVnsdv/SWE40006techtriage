@@ -1,0 +1,56 @@
+[
+  {
+    "id": "python-01",
+    "category": "Python",
+    "symptom": "ModuleNotFoundError: No module named ...",
+    "steps": [
+      "Check your virtual environment is active. Its name usually shows at the start of the terminal line.",
+      "Install the missing package with 'pip install <package>', or install everything with 'pip install -r requirements.txt'.",
+      "Run 'python -m pip --version' to check pip belongs to the same Python you are running.",
+      "In VS Code, pick the right interpreter with Ctrl+Shift+P, then 'Python: Select Interpreter'."
+    ]
+  },
+  {
+    "id": "python-02",
+    "category": "Python",
+    "symptom": "Windows says \"python is not recognized\" as a command",
+    "steps": [
+      "Check Python is installed by running 'py --version'.",
+      "If it is missing, install it from python.org and tick 'Add python.exe to PATH' during setup.",
+      "Close the terminal and open a new one so it picks up the change.",
+      "If typing python opens the Microsoft Store, turn off the python entries in Settings, then Apps, then Advanced app settings, then App execution aliases."
+    ]
+  },
+  {
+    "id": "python-03",
+    "category": "Python",
+    "symptom": "pip install fails with a permission denied error",
+    "steps": [
+      "Create and activate a virtual environment, then install the package into it instead of the system Python.",
+      "If you cannot use a virtual environment, install just for your user with 'pip install --user <package>'.",
+      "Do not use 'sudo pip install', because it can break the Python your system relies on."
+    ]
+  },
+  {
+    "id": "python-04",
+    "category": "Python",
+    "symptom": "IndentationError or TabError when running a script",
+    "steps": [
+      "Go to the line number shown in the error.",
+      "Make sure every line in that block uses 4 spaces, not a mix of tabs and spaces.",
+      "Set your editor to insert spaces when you press Tab (in VS Code, click 'Spaces' in the bottom bar).",
+      "Save the file and run the script again."
+    ]
+  },
+  {
+    "id": "python-05",
+    "category": "Python",
+    "symptom": "Code that works for my teammates gives me a SyntaxError",
+    "steps": [
+      "Check your Python version with 'python --version'.",
+      "Compare it with the version the project needs, which is usually written in the README.",
+      "Newer features, such as the match statement, do not work on older Python versions.",
+      "Install the right version and create a fresh virtual environment with it."
+    ]
+  }
+]

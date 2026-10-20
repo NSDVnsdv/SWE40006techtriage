@@ -1,0 +1,41 @@
+{# Below is the code to make this page use the shared layout (top bar and footer) from base.html. #}
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+{# Below is the code to show the welcome banner at the top of the home page. #}
+<section class="tt-hero p-4 p-md-5 mb-4 shadow-sm">
+  <h1 class="fw-bold mb-2">What's going wrong?</h1>
+  <p class="lead mb-0">Pick a category, then the problem that matches what you see. TechTriage gives you the fix, step by step.</p>
+</section>
+
+{# Below is the code to show step 1: one card per category. Clicking a card reloads the page with that category chosen
+   and jumps down to its list of symptoms. #}
+<h2 class="h6 text-uppercase text-secondary mb-3">1. Choose a category</h2>
+<div class="row g-3 mb-4">
+  {% for name, count in categories %}
+  <div class="col-6 col-md-4 col-lg">
+    <a href="{{ url_for('home', category=name, _anchor='symptoms') }}"
+       class="card category-card h-100 text-decoration-none text-reset {{ 'active' if name == chosen }}">
+      <div class="card-body">
+        <div class="fw-semibold">{{ name }}</div>
+        <div class="small text-secondary">{{ count }} problem{{ 's' if count != 1 }}</div>
+      </div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+
+{# Below is the code to show step 2 only after a category is picked: one button per symptom.
+   Clicking a symptom sends its rule id to the app, which saves the session and opens the results page. #}
+{% if chosen %}
+<h2 id="symptoms" class="h6 text-uppercase text-secondary mb-3">2. Which of these matches what you see?</h2>
+<form method="post" action="{{ url_for('triage') }}" class="list-group shadow-sm">
+  {% for rule in symptoms %}
+  <button type="submit" name="rule_id" value="{{ rule.id }}" class="list-group-item list-group-item-action py-3">
+    {{ rule.symptom }}
+  </button>
+  {% endfor %}
+</form>
+{% endif %}
+{% endblock %}

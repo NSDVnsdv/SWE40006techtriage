@@ -1,0 +1,189 @@
+# Below is the code to name this workflow "Deploy", which is how it appears in the GitHub Actions tab.
+name: Deploy
+
+# Below is the code to start a deploy with the "Run workflow" button (pick a server and an image),
+# or from another workflow, which is how Level 4 will deploy automatically.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Which server to deploy to
+        type: choice
+        options: [development, testing, staging, production]
+        required: true
+      image_tag:
+        description: Full commit ID (SHA) of the image to deploy, taken from a green CI run
+        type: string
+        required: true
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      image_tag:
+        type: string
+        required: true
+
+# Below is the code to let this workflow only read the code. It never changes the repository.
+permissions:
+  contents: read
+
+# Below is the code to allow only one deploy at a time to each server. A second deploy waits for the first to finish.
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  # Below is the code to run the "deploy" job: update the chosen server to the chosen image through AWS Systems Manager,
+  # then wait until the server's /health check says the database is connected.
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ steps.address.outputs.url }}
+    outputs:
+      url: ${{ steps.address.outputs.url }}
+    env:
+      INSTANCE_ID: ${{ vars.INSTANCE_ID }}
+      IMAGE_TAG: ${{ inputs.image_tag }}
+      TARGET_ENV: ${{ inputs.environment }}
+    steps:
+      # Below is the code to stop straight away if the image is not a full 40-character commit ID,
+      # or if this environment has no INSTANCE_ID saved in its GitHub settings.
+      - name: Check the inputs
+        run: |
+          [[ "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::image_tag must be the full 40-character commit ID"; exit 1; }
+          [ -n "$INSTANCE_ID" ] || { echo "::error::Add an INSTANCE_ID variable to the '$TARGET_ENV' GitHub environment"; exit 1; }
+
+      # Below is the code to log in to AWS with the keys saved as GitHub secrets.
+      # Learner Lab keys expire when the lab session ends, so they are pasted in again each session.
+      - name: Log in to AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
+
+      # Below is the code to look up the server's current public address, because Development, Testing
+      # and Staging get a new one every time they are stopped and started.
+      - name: Find the server's address
+        id: address
+        run: |
+          ip=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" \
+            --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
+          [ "$ip" != "None" ] || { echo "::error::The $TARGET_ENV server has no public address. Is it stopped?"; exit 1; }
+          echo "url=http://$ip" >> "$GITHUB_OUTPUT"
+          echo "$TARGET_ENV server $INSTANCE_ID is at http://$ip"
+
+      # Below is the code to send the deploy commands to the server through Systems Manager (no SSH needed),
+      # wait for them to finish, and print everything the server printed.
+      - name: Deploy with Systems Manager
+        run: |
+          script=$(printf 'REPO=%s\nTAG=%s\n' "$GITHUB_REPOSITORY" "$IMAGE_TAG"; cat <<'SCRIPT'
+          # Below is the code to stop at the first error and work in the folder holding the server's compose files and .env.
+          set -euo pipefail
+          cd /opt/techtriage
+          # Below is the code to download the compose files from the exact commit being deployed (Production also gets its monitoring add-on).
+          raw="https://raw.githubusercontent.com/$REPO/$TAG"
+          curl -fsSL "$raw/compose.yaml" -o compose.yaml
+          if grep -q '^COMPOSE_FILE=.*compose.monitoring.yaml' .env; then curl -fsSL "$raw/compose.monitoring.yaml" -o compose.monitoring.yaml; fi
+          # Below is the code to refuse to deploy if this server has no database password in its .env yet.
+          grep -q '^DB_PASSWORD=.' .env || { echo "DB_PASSWORD is missing from /opt/techtriage/.env"; exit 1; }
+          # Below is the code to print the image that was running before, then switch .env to the new image.
+          echo "Previous image: $(grep '^IMAGE_TAG=' .env || echo none)"
+          if grep -q '^IMAGE_TAG=' .env; then sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=$TAG|" .env; else echo "IMAGE_TAG=$TAG" >> .env; fi
+          # Below is the code to download only the new app image (the PostgreSQL image is kept), restart with it and show the result.
+          docker compose pull app
+          docker compose up -d
+          sleep 10
+          docker compose ps
+          SCRIPT
+          )
+          params=$(jq -n --arg script "$script" '{commands: ($script | split("\n"))}')
+          id=$(aws ssm send-command --instance-ids "$INSTANCE_ID" --document-name AWS-RunShellScript \
+            --comment "TechTriage deploy ${IMAGE_TAG:0:7} to $TARGET_ENV" --parameters "$params" \
+            --query Command.CommandId --output text)
+          echo "Systems Manager command ID: $id"
+          for _ in $(seq 1 60); do
+            sleep 5
+            status=$(aws ssm get-command-invocation --command-id "$id" --instance-id "$INSTANCE_ID" \
+              --query Status --output text 2>/dev/null || echo Pending)
+            case "$status" in Pending|InProgress|Delayed) continue ;; *) break ;; esac
+          done
+          echo "----- output from the $TARGET_ENV server -----"
+          aws ssm get-command-invocation --command-id "$id" --instance-id "$INSTANCE_ID" \
+            --query '[StandardOutputContent, StandardErrorContent]' --output text
+          echo "----- Systems Manager status: $status -----"
+          [ "$status" = Success ]
+
+      # Below is the code to check the deploy worked: call /health every 10 seconds, for up to 3 minutes,
+      # until it answers with "database": "connected".
+      - name: Wait for /health
+        env:
+          URL: ${{ steps.address.outputs.url }}
+        run: |
+          for attempt in $(seq 1 18); do
+            body=$(curl -s --max-time 5 "$URL/health" || true)
+            echo "attempt $attempt: ${body:-no answer yet}"
+            if echo "$body" | grep -q '"database": *"connected"'; then exit 0; fi
+            sleep 10
+          done
+          echo "::error::$URL/health never reported the database as connected"
+          exit 1
+
+  # Below is the code to run the "verify" job after a successful deploy: the Playwright browser tests on Testing,
+  # or the 2 smoke tests on every other server, against the server that was just updated.
+  verify:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BASE_URL: ${{ needs.deploy.outputs.url }}
+      EXPECTED_SHA: ${{ inputs.image_tag }}
+      EXPECTED_ENV: ${{ inputs.environment }}
+    steps:
+      # Below is the code to download the repository's code (it holds the tests) onto GitHub's machine.
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      # Below is the code to install Python 3.12 and reuse packages downloaded by earlier runs, to save time.
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      # Below is the code to install the testing tools.
+      - name: Install packages
+        run: pip install -r requirements-dev.txt
+
+      # Below is the code to install the Chromium browser that Playwright drives (only needed for Testing).
+      - name: Install the Playwright browser
+        if: inputs.environment == 'testing'
+        run: python -m playwright install --with-deps chromium
+
+      # Below is the code to run the Playwright browser tests against the Testing server,
+      # keeping a trace (a step-by-step recording) of any test that fails.
+      - name: Playwright browser tests
+        if: inputs.environment == 'testing'
+        run: >-
+          python -m pytest tests/test_e2e.py --base-url "$BASE_URL"
+          --tracing retain-on-failure --output reports/playwright-traces --junitxml=reports/e2e-junit.xml
+
+      # Below is the code to run the 2 smoke tests (database connected, expected commit) on every other server.
+      - name: Smoke tests
+        if: inputs.environment != 'testing'
+        run: python -m pytest tests/test_smoke.py --base-url "$BASE_URL" --junitxml=reports/smoke-junit.xml
+
+      # Below is the code to save the test reports, and any Playwright traces, with the run.
+      - name: Save test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.environment }}-test-reports
+          path: reports/
+          if-no-files-found: ignore
+          retention-days: 30

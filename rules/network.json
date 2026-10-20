@@ -1,0 +1,57 @@
+[
+  {
+    "id": "network-01",
+    "category": "Network and setup",
+    "symptom": "pip or npm install times out or cannot download packages",
+    "steps": [
+      "Check your internet works by opening any website.",
+      "If you are on campus Wi-Fi or a VPN, try another network such as a phone hotspot.",
+      "If your network uses a proxy, set it in your terminal before installing.",
+      "Retry with a longer timeout, for example 'pip install --timeout 60 <package>'."
+    ]
+  },
+  {
+    "id": "network-02",
+    "category": "Network and setup",
+    "symptom": "\"SSL certificate verify failed\" when downloading",
+    "steps": [
+      "Check your computer's date and time are correct, because certificates depend on them.",
+      "Update the certificate bundle with 'pip install --upgrade pip certifi'.",
+      "On a work or school network, ask IT for their security certificate and install it.",
+      "Do not switch off SSL checking to make the error go away."
+    ]
+  },
+  {
+    "id": "network-03",
+    "category": "Network and setup",
+    "symptom": "Connection timed out when opening my cloud server",
+    "steps": [
+      "Check the server is running and you are using its current public IP address, because it can change after a restart.",
+      "Check the firewall or AWS security group allows the port you are using.",
+      "Check the app on the server listens on 0.0.0.0, not just 127.0.0.1.",
+      "Test from the server itself with 'curl localhost:<port>' to see if the app answers there."
+    ]
+  },
+  {
+    "id": "network-04",
+    "category": "Network and setup",
+    "symptom": "Website name cannot be found (DNS error)",
+    "steps": [
+      "Check the address is spelled correctly.",
+      "Run 'nslookup <name>' to see if the name turns into an IP address.",
+      "Clear the DNS cache with 'ipconfig /flushdns' on Windows.",
+      "Try a public DNS server such as 1.1.1.1 or 8.8.8.8 in your network settings."
+    ]
+  },
+  {
+    "id": "network-05",
+    "category": "Network and setup",
+    "symptom": "My app does not pick up a setting from the .env file",
+    "steps": [
+      "Check the setting's name is spelled exactly the same in the code and in the .env file.",
+      "Check the .env file is in the folder the app starts from (for Docker Compose, next to compose.yaml).",
+      "Restart the app after changing .env, because settings are only read when it starts.",
+      "Print the setting when the app starts to confirm it was loaded, but never print passwords."
+    ]
+  }
+]

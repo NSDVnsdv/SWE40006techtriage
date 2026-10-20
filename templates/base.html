@@ -1,0 +1,91 @@
+<!doctype html>
+{# Below is the code to set up the layout shared by every page: the top bar, the content area and the footer.
+   Each page only fills in its own title and content blocks. #}
+<html lang="en">
+<head>
+  {# Below is the code to set the text encoding, make the page fit phone screens and set the browser tab title. #}
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %} | TechTriage</title>
+
+  {# Below is the code to load Bootstrap, a ready-made styling library, from a public website (CDN).
+     The integrity code makes the browser refuse the file if anyone has changed it. #}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+
+  <style>
+    /* Below is the code to give every page a soft grey background and dark grey text. */
+    body { background: #f4f6fb; color: #1f2937; }
+
+    /* Below is the code to colour the top bar deep indigo and make the TechTriage name bold. */
+    .tt-navbar { background: #312e81; }
+    .tt-navbar .navbar-brand { font-weight: 700; letter-spacing: .02em; }
+
+    /* Below is the code to give each environment's badge its own colour (blue, amber, purple, green),
+       so it is obvious which server a page or screenshot came from. */
+    .env-badge { color: #fff; background: #6b7280; text-transform: uppercase; letter-spacing: .05em; }
+    .env-development { background: #2563eb; }
+    .env-testing { background: #d97706; }
+    .env-staging { background: #7c3aed; }
+    .env-production { background: #15803d; }
+
+    /* Below is the code to style the welcome banner on the home page: an indigo-to-blue fade with white text. */
+    .tt-hero { background: linear-gradient(135deg, #312e81, #2563eb); color: #fff; border-radius: 1rem; }
+
+    /* Below is the code to make the category cards lift slightly with an indigo border when the mouse is over them,
+       and to highlight the card that has been picked. */
+    .category-card { border: 1px solid #e5e7eb; transition: transform .15s, box-shadow .15s; }
+    .category-card:hover { transform: translateY(-3px); box-shadow: 0 .5rem 1rem rgba(49, 46, 129, .12); border-color: #6366f1; }
+    .category-card.active { border: 2px solid #4f46e5; background: #eef2ff; }
+
+    /* Below is the code to turn the fix steps into a list with round, numbered indigo circles
+       instead of plain numbers, with a thin line between steps. */
+    .steps { counter-reset: step; list-style: none; padding-left: 0; }
+    .steps li { counter-increment: step; position: relative; padding: .75rem 0 .75rem 3.25rem; border-bottom: 1px solid #eef0f4; }
+    .steps li:last-child { border-bottom: 0; }
+    .steps li::before {
+      content: counter(step); position: absolute; left: 0; top: .5rem; width: 2.25rem; height: 2.25rem;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; background: #4f46e5; color: #fff; font-weight: 700;
+    }
+
+    /* Below is the code to change Bootstrap's main blue button to our indigo colour,
+       with a slightly darker indigo when the mouse is over it. */
+    .btn-primary { --bs-btn-bg: #4f46e5; --bs-btn-border-color: #4f46e5; --bs-btn-hover-bg: #4338ca; --bs-btn-hover-border-color: #4338ca; }
+
+    /* Below is the code to style the number tiles on the stats page: a big bold number with a small grey label underneath. */
+    .stat-value { font-size: 2.25rem; font-weight: 700; color: #312e81; line-height: 1.2; }
+    .stat-label { color: #6b7280; font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
+
+    /* Below is the code to make the footer text small and grey so it does not distract from the page. */
+    .tt-footer { color: #6b7280; }
+  </style>
+</head>
+<body>
+  {# Below is the code to build the top bar: the TechTriage name, links to the Home and Stats pages,
+     and a coloured badge showing which environment (server) this is. #}
+  <nav class="navbar navbar-dark tt-navbar mb-4">
+    <div class="container">
+      <a class="navbar-brand" href="{{ url_for('home') }}">TechTriage</a>
+      <div class="d-flex align-items-center gap-3">
+        <a class="nav-link text-white" href="{{ url_for('home') }}">Home</a>
+        <a class="nav-link text-white" href="{{ url_for('stats') }}">Stats</a>
+        <span class="badge env-badge env-{{ app_env }}">{{ app_env }}</span>
+      </div>
+    </div>
+  </nav>
+
+  {# Below is the code to create the main area, where each page puts its own content. #}
+  <main class="container pb-5">
+    {% block content %}{% endblock %}
+  </main>
+
+  {# Below is the code to build the footer, which shows the environment and the short commit ID on every page,
+     with links to the /health and /version checks. #}
+  <footer class="container tt-footer border-top py-3 small">
+    TechTriage - student troubleshooting assistant | Environment: {{ app_env }} |
+    Version: <code>{{ app_version[:7] }}</code> |
+    <a href="{{ url_for('health') }}">/health</a> | <a href="{{ url_for('version') }}">/version</a>
+  </footer>
+</body>
+</html>
