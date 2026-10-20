@@ -1,0 +1,56 @@
+[
+  {
+    "id": "ports-01",
+    "category": "Localhost and ports",
+    "symptom": "Browser says \"This site can't be reached\" on localhost",
+    "steps": [
+      "Check the server is still running in its terminal and shows no errors.",
+      "Use the exact port the server printed, for example http://localhost:5000.",
+      "Try http://127.0.0.1:<port> instead of localhost.",
+      "If the app runs in Docker, check the port is published with '-p' or under 'ports' in compose.yaml."
+    ]
+  },
+  {
+    "id": "ports-02",
+    "category": "Localhost and ports",
+    "symptom": "\"Address already in use\" when starting a local server",
+    "steps": [
+      "Another program is already using the port, often an old copy of your own server.",
+      "Find it with 'netstat -ano | findstr :<port>' on Windows or 'lsof -i :<port>' on Mac or Linux.",
+      "Stop that program or close the old terminal that is running it.",
+      "Or start your server on a different port."
+    ]
+  },
+  {
+    "id": "ports-03",
+    "category": "Localhost and ports",
+    "symptom": "My app works on my computer but not from my phone or another computer",
+    "steps": [
+      "Development servers such as Flask only listen on 127.0.0.1 by default, which means this computer only.",
+      "Start it with 'flask run --host=0.0.0.0' so other devices can reach it.",
+      "Allow the port through your computer's firewall.",
+      "On the other device, use this computer's local IP address (shown by 'ipconfig' or 'ifconfig'), not localhost."
+    ]
+  },
+  {
+    "id": "ports-04",
+    "category": "Localhost and ports",
+    "symptom": "The page still shows old content after I changed the code",
+    "steps": [
+      "Restart the server, or run it in debug mode so it reloads by itself.",
+      "Hard refresh the page with Ctrl+F5 (Cmd+Shift+R on a Mac).",
+      "If the app runs in Docker, rebuild the image before starting the container again."
+    ]
+  },
+  {
+    "id": "ports-05",
+    "category": "Localhost and ports",
+    "symptom": "Browser console shows a CORS error when calling my local API",
+    "steps": [
+      "Browsers block calls between different ports unless the API says it allows them.",
+      "Add CORS headers to the API, for example with the flask-cors package in Flask.",
+      "Or serve the web page and the API from the same address and port.",
+      "Do not install browser extensions that switch CORS off, because they hide the real problem."
+    ]
+  }
+]

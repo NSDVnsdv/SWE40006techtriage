@@ -11,9 +11,11 @@ aws cloudwatch describe-alarms --alarm-name-prefix "$ALARM_PREFIX" \
   --query 'MetricAlarms[].[AlarmName, StateValue, StateUpdatedTimestamp]' --output table
 
 echo "== State changes in the last 24 hours"
-aws cloudwatch describe-alarm-history --alarm-name-prefix "$ALARM_PREFIX" \
+# describe-alarm-history has no name-prefix option, so filter in the query instead.
+aws cloudwatch describe-alarm-history \
   --history-item-type StateUpdate --start-date "$(date -u -d '-24 hours' +%FT%TZ)" \
-  --query 'AlarmHistoryItems[].[Timestamp, AlarmName, HistorySummary]' --output table
+  --query "reverse(sort_by(AlarmHistoryItems[?starts_with(AlarmName, '${ALARM_PREFIX}')], &Timestamp))[].[Timestamp, AlarmName, HistorySummary]" \
+  --output table
 
 echo "== SNS subscriptions"
 TOPIC=$(topic_arn)

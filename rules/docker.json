@@ -1,0 +1,57 @@
+[
+  {
+    "id": "docker-01",
+    "category": "Docker",
+    "symptom": "Docker says it cannot connect to the Docker daemon",
+    "steps": [
+      "Open Docker Desktop and wait until it says Docker is running.",
+      "Open a new terminal and run 'docker info' to check the Docker engine answers.",
+      "On Linux, start the engine with 'sudo systemctl start docker'.",
+      "If it still fails, restart your computer and open Docker Desktop again."
+    ]
+  },
+  {
+    "id": "docker-02",
+    "category": "Docker",
+    "symptom": "Port is already allocated when starting a container",
+    "steps": [
+      "Run 'docker ps' to see if another container is already using that port.",
+      "Stop that container with 'docker stop <container-name>'.",
+      "If no container is using it, find the program holding the port ('netstat -ano' on Windows, 'lsof -i :<port>' on Mac or Linux) and close it.",
+      "Or use a different port on your computer, for example '-p 8081:80'."
+    ]
+  },
+  {
+    "id": "docker-03",
+    "category": "Docker",
+    "symptom": "Image build fails with \"COPY failed: file not found\"",
+    "steps": [
+      "Check the path in the COPY line is relative to the build folder, not to the folder your terminal is in.",
+      "Run 'docker build' from the folder that holds the Dockerfile, or give the right folder at the end of the command.",
+      "Make sure the file is not listed in .dockerignore.",
+      "Check the capital letters in the file name match exactly, because Linux paths are case-sensitive."
+    ]
+  },
+  {
+    "id": "docker-04",
+    "category": "Docker",
+    "symptom": "Container starts and then stops straight away",
+    "steps": [
+      "Run 'docker ps -a' to see the stopped container and its exit code.",
+      "Read the error message with 'docker logs <container-name>'.",
+      "Check the start command (CMD) runs a program that keeps running, such as a web server.",
+      "Fix the error, rebuild the image and start the container again."
+    ]
+  },
+  {
+    "id": "docker-05",
+    "category": "Docker",
+    "symptom": "Docker fails with \"no space left on device\"",
+    "steps": [
+      "Run 'docker system df' to see what is using the space.",
+      "Remove stopped containers, unused networks and old images with 'docker system prune'.",
+      "Only add '--volumes' if you are sure no volume holds data you still need.",
+      "In Docker Desktop, you can also give Docker more disk space under Settings, then Resources."
+    ]
+  }
+]

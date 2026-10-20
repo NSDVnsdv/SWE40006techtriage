@@ -1,0 +1,40 @@
+{# Below is the code to make this page use the shared layout from base.html, with the symptom as the tab title. #}
+{% extends "base.html" %}
+{% block title %}{{ rule.symptom }}{% endblock %}
+
+{% block content %}
+{# Below is the code to show the results card: the category label, the chosen symptom and the numbered fix steps. #}
+<div class="card shadow-sm mb-4">
+  <div class="card-body p-4">
+    <span class="badge text-bg-light border mb-2">{{ rule.category }}</span>
+    <h1 class="h3 fw-bold mb-4">{{ rule.symptom }}</h1>
+    <ol class="steps mb-0">
+      {% for step in rule.steps %}
+      <li>{{ step }}</li>
+      {% endfor %}
+    </ol>
+  </div>
+</div>
+
+{# Below is the code to show the "Did this fix it?" box. Before the user answers it shows Yes and No buttons;
+   afterwards it confirms the answer was saved and offers to start a new problem. #}
+<div class="card shadow-sm">
+  <div class="card-body p-4 text-center">
+    {% if fixed is none %}
+    <h2 class="h5 mb-3">Did this fix it?</h2>
+    <form method="post" action="{{ url_for('feedback', session_id=session_id) }}" class="d-flex justify-content-center gap-3">
+      <button type="submit" name="fixed" value="yes" class="btn btn-success btn-lg px-5">Yes</button>
+      <button type="submit" name="fixed" value="no" class="btn btn-outline-danger btn-lg px-5">No</button>
+    </form>
+    {% else %}
+    <div class="alert {{ 'alert-success' if fixed else 'alert-warning' }}" role="status">
+      Thanks, your answer has been saved: <strong>{{ 'Yes, it is fixed' if fixed else 'No, still not fixed' }}</strong>.
+    </div>
+    {% if not fixed %}
+    <p class="text-secondary">Try another symptom that is close to yours, or ask a tutor with these steps in mind.</p>
+    {% endif %}
+    <a href="{{ url_for('home') }}" class="btn btn-primary">Start a new problem</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

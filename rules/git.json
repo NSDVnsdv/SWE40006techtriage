@@ -1,0 +1,56 @@
+[
+  {
+    "id": "git-01",
+    "category": "Git and GitHub",
+    "symptom": "git push is rejected because the remote has newer commits",
+    "steps": [
+      "Someone pushed to the same branch before you. Run 'git pull --rebase' to bring in their commits first.",
+      "If there are conflicts, fix them, run 'git add <file>' and then 'git rebase --continue'.",
+      "Run 'git push' again.",
+      "Do not use 'git push --force' on a shared branch, because it can delete other people's work."
+    ]
+  },
+  {
+    "id": "git-02",
+    "category": "Git and GitHub",
+    "symptom": "Merge conflict after git pull or git merge",
+    "steps": [
+      "Run 'git status' to list the files with conflicts.",
+      "Open each file and find the lines between <<<<<<< and >>>>>>>.",
+      "Keep the lines you want, delete the marker lines and save the file.",
+      "Run 'git add <file>' for each fixed file, then 'git commit' to finish the merge."
+    ]
+  },
+  {
+    "id": "git-03",
+    "category": "Git and GitHub",
+    "symptom": "Authentication failed when pushing to GitHub",
+    "steps": [
+      "GitHub no longer accepts your account password for git over HTTPS.",
+      "Sign in through Git Credential Manager when the browser window opens, or create a personal access token in GitHub under Settings, then Developer settings.",
+      "If an old password is saved, remove the github.com entry from Windows Credential Manager (or Keychain Access on a Mac).",
+      "Run 'git push' again and sign in through the browser, or paste the token when asked for a password."
+    ]
+  },
+  {
+    "id": "git-04",
+    "category": "Git and GitHub",
+    "symptom": "I committed a file by mistake, such as .env",
+    "steps": [
+      "Stop git tracking the file but keep it on your computer with 'git rm --cached <file>'.",
+      "Add the file name to .gitignore so it is not added again.",
+      "Commit and push the change.",
+      "If the file held a password or key, change that secret straight away, because it is still in the git history."
+    ]
+  },
+  {
+    "id": "git-05",
+    "category": "Git and GitHub",
+    "symptom": "Git says I am in a \"detached HEAD\" state",
+    "steps": [
+      "This means you checked out a commit instead of a branch, so new commits will not belong to any branch.",
+      "To keep changes you made here, create a branch with 'git switch -c <new-branch-name>'.",
+      "To go back to normal, run 'git switch <branch-name>', for example 'git switch develop'."
+    ]
+  }
+]

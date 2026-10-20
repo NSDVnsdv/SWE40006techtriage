@@ -1,0 +1,14 @@
+# Below is the code to tell pytest where the tests are, and to list any skipped or failed tests at the end of a run.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+# Below is the code to measure test coverage on our two app files only, not on the tests or other people's libraries.
+[tool.coverage.run]
+source_pkgs = ["app", "rules"]
+
+# Below is the code to set the coverage gate: a test run fails if the tests reach less than 80% of the code
+# (the same as --cov-fail-under=80), and the report lists the line numbers no test reached.
+[tool.coverage.report]
+fail_under = 80
+show_missing = true

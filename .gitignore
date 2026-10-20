@@ -21,6 +21,7 @@ coverage.xml
 htmlcov/
 test-results/
 playwright-report/
+reports/
 
 # Editors and OS
 .vscode/
