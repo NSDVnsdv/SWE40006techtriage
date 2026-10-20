@@ -1,0 +1,33 @@
+TechTriage B8 seeded-fault drill, 2026-10-20 15:03, commit 62827b0
+Each bug is planted on its own on the local branch practice/seeded-faults, the unit + integration tests run, then the bug is removed.
+
+Baseline (no bugs): 78 tests, 0 failed
+
+1. Wrong recommendation returned: CAUGHT (1 of 78 tests failed)
+   planted change in app.py: 'rule = find_rule(RULES, row[0]) if row else None' -> 'rule = RULES[0] if row else None'
+   - test_results_page_shows_the_saved_rule
+
+2. Feedback not saved: CAUGHT (4 of 78 tests failed)
+   planted change in app.py: added 'conn.rollback()' straight after saving the answer, so it is thrown away
+   - test_yes_answer_is_saved_and_read_back
+   - test_no_answer_is_saved_and_read_back
+   - test_answering_again_replaces_the_answer
+   - test_stats_page_counts_saved_sessions_and_answers
+
+3. /health healthy while PostgreSQL is down: CAUGHT (2 of 78 tests failed)
+   planted change in app.py: 'return {"status": "error", "database": "unreachable", "environment": A' -> 'return {"status": "ok", "database": "connected", "environment": APP_EN'
+   - test_health_reports_503_when_the_database_is_down
+   - test_health_is_503_without_the_database
+
+4. /version reporting the wrong SHA: CAUGHT (1 of 78 tests failed)
+   planted change in app.py: 'return {"environment": APP_ENV, "version": APP_VERSION}' -> 'return {"environment": APP_ENV, "version": os.environ.get("GIT_SHA", "'
+   - test_version_shows_environment_and_commit
+
+5. Invalid symptom accepted: CAUGHT (3 of 78 tests failed)
+   planted change in app.py: 'abort(400, description="Unknown symptom. Please pick one from the list' -> 'rule = RULES[0]'
+   - test_triage_rejects_unknown_symptoms[form0]
+   - test_triage_rejects_unknown_symptoms[form1]
+   - test_triage_rejects_unknown_symptoms[form2]
+
+RESULT: 5 of 5 seeded faults detected
+After removing all bugs: 78 tests, 0 failed

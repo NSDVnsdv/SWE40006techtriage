@@ -1,0 +1,15 @@
+TechTriage B8 flaky-test check, 2026-10-20 15:04, commit 62827b0
+Full suite (unit + integration + Playwright + smoke) run 10 times; the browser and smoke tests use a local test copy of the app.
+
+Run  1: 87 tests, 87 passed, 0 failed, 10.5s
+Run  2: 87 tests, 87 passed, 0 failed, 7.8s
+Run  3: 87 tests, 87 passed, 0 failed, 7.7s
+Run  4: 87 tests, 87 passed, 0 failed, 7.7s
+Run  5: 87 tests, 87 passed, 0 failed, 7.6s
+Run  6: 87 tests, 87 passed, 0 failed, 7.8s
+Run  7: 87 tests, 87 passed, 0 failed, 7.8s
+Run  8: 87 tests, 87 passed, 0 failed, 7.6s
+Run  9: 87 tests, 87 passed, 0 failed, 7.7s
+Run 10: 87 tests, 87 passed, 0 failed, 7.6s
+
+Distinct tests: 87 | flaky (passed in some runs, failed in others): 0
