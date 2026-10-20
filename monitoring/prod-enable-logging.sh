@@ -1,25 +1,26 @@
 #!/bin/bash
-# Level 2, step 2. Run ON PRODUCTION as root (Session Manager, after `sudo -i`):
-#   curl -fsSL https://raw.githubusercontent.com/NSDVnsdv/SWE40006techtriage/main/monitoring/prod-enable-logging.sh | bash
-#
-# Pulls the newest compose files and image, switches on compose.monitoring.yaml
-# (container logs -> CloudWatch Logs) and copies the other Production scripts
-# to /opt/techtriage/monitoring.
+# Below is the code to switch on CloudWatch logging on Production: download the compose files and Production scripts,
+# update .env and restart the app. Run ON PRODUCTION as root: curl -fsSL <raw GitHub link to this file> | bash
+
+# Below is the code to stop the script at the first error.
 set -euo pipefail
 
+# Below is the code to say which branch to download from (main unless REF is set) and where the app lives on the server.
 REF="${REF:-main}"
 RAW="https://raw.githubusercontent.com/NSDVnsdv/SWE40006techtriage/${REF}"
 APP_DIR="/opt/techtriage"
 
+# Below is the code to stop unless the script is running as root on the Production server.
 [ "$(id -u)" -eq 0 ] || { echo "Run as root: sudo -i first"; exit 1; }
 grep -q '^APP_ENV=production$' "$APP_DIR/.env" || { echo "This is not the production server, stopping."; exit 1; }
 
-# Set KEY=VALUE in .env, replacing the line if it already exists.
+# Below is the code to set KEY=VALUE in .env, replacing the line if it already exists or adding it if not.
 set_env() {
   if grep -q "^$1=" "$APP_DIR/.env"; then sed -i "s|^$1=.*|$1=$2|" "$APP_DIR/.env"
   else echo "$1=$2" >> "$APP_DIR/.env"; fi
 }
 
+# Below is the code to download both compose files and the other Production monitoring scripts.
 echo "== 1. Download compose files and Production scripts from ${REF}"
 curl -fsSL "$RAW/compose.yaml"            -o "$APP_DIR/compose.yaml"
 curl -fsSL "$RAW/compose.monitoring.yaml" -o "$APP_DIR/compose.monitoring.yaml"
@@ -29,12 +30,14 @@ for f in prod-install-agent.sh prod-fault-injection.sh alarm-test-prod.sh cloudw
 done
 chmod +x "$APP_DIR"/monitoring/*.sh
 
+# Below is the code to switch on the monitoring add-on in .env, with the fault test pages kept off.
 echo "== 2. Switch on the monitoring override in .env"
 set_env COMPOSE_FILE "compose.yaml:compose.monitoring.yaml"
 set_env AWS_REGION "us-east-1"
 set_env FAULT_INJECTION "0"
 cat "$APP_DIR/.env"
 
+# Below is the code to download the newest image and recreate the app with the new settings.
 echo "== 3. Pull the newest image and recreate the app"
 cd "$APP_DIR"
 docker compose pull
@@ -42,6 +45,7 @@ docker compose up -d
 sleep 15
 docker compose ps
 
+# Below is the code to check the result: the logging driver in use, the answer from each page, and the latest log lines.
 echo "== 4. Checks"
 echo -n "Logging driver: "; docker inspect techtriage-app-1 --format '{{.HostConfig.LogConfig.Type}} {{json .HostConfig.LogConfig.Config}}'
 for p in / /version /health /does-not-exist; do
