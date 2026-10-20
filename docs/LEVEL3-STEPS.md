@@ -263,6 +263,17 @@ It already has:
 
 **Before every deploy session (and before the demo)**: Learner Lab -> Start Lab, then the repo
 owner re-pastes the 3 AWS secrets (values only). Stopped servers must be started in EC2 first.
+The keys must come from the Learner Lab account that holds the four servers: keys from a
+different student's own Learner Lab belong to a different AWS account and cannot reach them.
+
+**The repo moved from NSDVnsdv to TylerMarwood (20 Oct 2026).** Environments, variables,
+secrets, the ruleset and collaborators came across with it. One thing changes: image addresses
+include the owner's name, so new builds go to `ghcr.io/tylermarwood/swe40006techtriage`
+instead of `ghcr.io/nsdvnsdv/swe40006techtriage`. Because of this:
+
+- The deploy workflow now sets `GHCR_OWNER` on each server to the current repo owner at every deploy, so the servers follow the move automatically
+- **After the first CI build on `main` in the moved repo, the owner must make the new package public once**: GitHub profile -> Packages -> `swe40006techtriage` -> Package settings -> Danger Zone -> Change visibility -> Public. GitHub creates new packages as private, and the servers download without a password
+- Versions built before the move (such as `b2346bb`) exist only under `nsdvnsdv`, so roll back only to versions built after the move
 
 **Demo rule**: add this as the last entry of `rules/python.json` (put a comma after the
 previous rule's closing `}`). It passes the rule check and every test (checked: 26 rules,
