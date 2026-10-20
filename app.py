@@ -21,7 +21,7 @@ app = Flask(__name__)
 RULES = load_rules()
 app.jinja_env.globals.update(app_env=APP_ENV, app_version=APP_VERSION)
 
-# Below is the code (written in SQL) that creates the two database tables if they do not exist yet.
+# Below is the code to create the two database tables (written in SQL) if they do not exist yet.
 # "IF NOT EXISTS" means running it again never deletes or changes data that is already saved.
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS triage_sessions (
@@ -52,7 +52,7 @@ def init_db():
         conn.execute(SCHEMA)
 
 
-# Below is the code that does the maths for the stats page: total sessions, most common category and fix rate.
+# Below is the code to do the maths for the stats page: total sessions, most common category and fix rate.
 # If two categories tie, the one first in the alphabet wins; with no Yes/No answers yet the fix rate is 0.
 def build_stats(category_counts, fixed_count, answered_count):
     total = sum(category_counts.values())
@@ -67,7 +67,7 @@ def build_stats(category_counts, fixed_count, answered_count):
     }
 
 
-# Below is the code for the home page. With no category chosen it shows the list of categories;
+# Below is the code to show the home page. With no category chosen it lists the categories;
 # after one is clicked (for example /?category=Docker) it also lists that category's symptoms.
 @app.get("/")
 def home():
@@ -79,7 +79,7 @@ def home():
     return render_template("index.html", categories=category_list, chosen=chosen, symptoms=symptoms)
 
 
-# Below is the code that runs when a symptom is picked. An unknown symptom is rejected (error 400);
+# Below is the code to handle a picked symptom. An unknown symptom is rejected (error 400);
 # a real one is saved as a new triage session and the user is sent to its results page.
 @app.post("/triage")
 def triage():
@@ -94,7 +94,7 @@ def triage():
     return redirect(url_for("result", session_id=session_id))
 
 
-# Below is the code for the results page. It looks up the saved session, then shows the rule's numbered steps
+# Below is the code to show the results page. It looks up the saved session, then shows the rule's numbered steps
 # and whether "Did this fix it?" has been answered yet (None means not answered).
 @app.get("/result/<int:session_id>")
 def result(session_id):
@@ -110,7 +110,7 @@ def result(session_id):
     return render_template("result.html", rule=rule, session_id=session_id, fixed=row[1])
 
 
-# Below is the code that saves the Yes/No answer, linked to its session. Answering again replaces the old answer,
+# Below is the code to save the Yes/No answer, linked to its session. Answering again replaces the old answer,
 # and an answer for a session that does not exist is rejected (error 404).
 @app.post("/result/<int:session_id>/feedback")
 def feedback(session_id):
@@ -128,7 +128,7 @@ def feedback(session_id):
     return redirect(url_for("result", session_id=session_id))
 
 
-# Below is the code for the stats page. It counts the sessions in each category and the Yes answers
+# Below is the code to show the stats page. It counts the sessions in each category and the Yes answers
 # in the database, then uses build_stats() to work out the totals and the fix rate.
 @app.get("/stats")
 def stats():
@@ -142,7 +142,7 @@ def stats():
     return render_template("stats.html", stats=build_stats(category_counts, fixed_count, answered_count))
 
 
-# Below is the code for /health, which the pipeline and the monitoring call. It asks the database "SELECT 1":
+# Below is the code to answer /health, which the pipeline and the monitoring call. It asks the database "SELECT 1":
 # if the database answers it returns 200 (healthy), otherwise 503 (unhealthy).
 @app.get("/health")
 def health():
@@ -154,14 +154,14 @@ def health():
     return {"status": "ok", "database": "connected", "environment": APP_ENV}
 
 
-# Below is the code for /version, which shows the environment name and the commit (SHA) the app was built from.
+# Below is the code to answer /version with the environment name and the commit (SHA) the app was built from.
 # The pipeline uses it to prove the same build reached Testing, Staging and Production.
 @app.get("/version")
 def version():
     return {"environment": APP_ENV, "version": APP_VERSION}
 
 
-# Below is the code for a Level 2 test page that returns a server error (500), to prove the 5xx alarm works.
+# Below is the code to add a Level 2 test page that returns a server error (500), to prove the 5xx alarm works.
 # It acts as if it does not exist (404) unless the server's .env sets FAULT_INJECTION=1.
 @app.get("/_fault/500")
 def fault_error():
@@ -170,7 +170,7 @@ def fault_error():
     return {"error": "simulated server error (FAULT_INJECTION=1)"}, 500
 
 
-# Below is the code for a Level 2 test page that answers slowly (up to 3 seconds), to prove the latency alarm works.
+# Below is the code to add a Level 2 test page that answers slowly (up to 3 seconds), to prove the latency alarm works.
 # It is also hidden (404) unless FAULT_INJECTION=1.
 @app.get("/_fault/slow")
 def fault_slow():

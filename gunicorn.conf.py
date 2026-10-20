@@ -9,7 +9,7 @@ accesslog = "-"
 access_log_format = '{"type": "access", "method": "%(m)s", "path": "%(U)s", "status": %(s)s, "duration_ms": %(M)s}'
 
 
-# Below is the code that Gunicorn runs once when it starts, before any page is served.
+# Below is the code to run one job when Gunicorn starts, before any page is served.
 # It creates the database tables if they are missing, so a brand-new server sets itself up.
 def on_starting(server):
     from app import init_db

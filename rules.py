@@ -70,7 +70,7 @@ def find_rule(rules, rule_id):
     return next((rule for rule in rules if rule["id"] == rule_id), None)
 
 
-# Below is the code for the rule schema check that the pipeline runs with "python rules.py".
+# Below is the code to run the rule schema check that the pipeline starts with "python rules.py".
 # It prints a summary and returns 0 when every rule is valid, or prints the problems and returns 1.
 def main(folder=RULES_DIR):
     try:
@@ -82,7 +82,7 @@ def main(folder=RULES_DIR):
     return 0
 
 
-# Below is the code that runs main() only when this file is started directly, not when the app imports it.
+# Below is the code to run main() only when this file is started directly, not when the app imports it.
 # The number main() returns becomes the exit code, so a failed check makes the pipeline step fail.
 if __name__ == "__main__":
     raise SystemExit(main())
