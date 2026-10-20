@@ -10,10 +10,12 @@ on:
     branches: [main, develop]
   workflow_dispatch:
 
-# Below is the code to give the workflow only the permissions it needs: read the code and upload images to GHCR.
+# Below is the code to give the workflow only the permissions it needs: read the code, upload images to GHCR,
+# and read this run's own job timings (for the pipeline timings report at the end).
 permissions:
   contents: read
   packages: write
+  actions: read
 
 jobs:
   # Below is the code to run the "test" job, a required check on pull requests: lint, rule schema check,
@@ -93,6 +95,8 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
     steps:
       # Below is the code to download the repository's code onto GitHub's machine.
       - name: Check out code
@@ -151,3 +155,98 @@ jobs:
             echo "${{ steps.meta.outputs.tags }}"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # Below is the code to save the image's commit ID and digest as a file with the run (a build artifact),
+      # so the report can show the exact image that went to every server.
+      - name: Save image digest
+        if: github.event_name != 'pull_request'
+        run: |
+          printf 'image=%s\ncommit=%s\ndigest=%s\n' "$IMAGE" "${{ github.sha }}" "${{ steps.build.outputs.digest }}" > image-digest.txt
+          cat image-digest.txt
+      - name: Upload image digest
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-digest
+          path: image-digest.txt
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------------------------------------------
+  # LEVEL 4: automatic deploys. Nobody presses anything until the Production approval.
+  #   merge into develop -> build -> Development (+ /health and smoke tests)
+  #   merge into main    -> build ONCE -> Testing (+ Playwright) -> Staging (+ smoke) -> [Approve] -> Production (+ smoke)
+  # Every server gets the SAME image: the one tagged with this run's commit ID.
+  # ---------------------------------------------------------------------------------------------------------------
+
+  # Below is the code to deploy every merge into "develop" to the Development server.
+  deploy-development:
+    name: Development
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/develop'
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: development
+      image_tag: ${{ github.sha }}
+      expected_digest: ${{ needs.build.outputs.digest }}
+    secrets: inherit
+
+  # Below is the code to deploy every merge into "main" to the Testing server and run the Playwright browser tests there.
+  deploy-testing:
+    name: Testing
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: testing
+      image_tag: ${{ github.sha }}
+      expected_digest: ${{ needs.build.outputs.digest }}
+    secrets: inherit
+
+  # Below is the code to deploy the same image to Staging, only after Testing and Playwright have passed.
+  deploy-staging:
+    name: Staging
+    needs: [build, deploy-testing]
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: staging
+      image_tag: ${{ github.sha }}
+      expected_digest: ${{ needs.build.outputs.digest }}
+    secrets: inherit
+
+  # Below is the code to deploy the same image to Production, only after Staging passed AND a reviewer clicks "Approve"
+  # (the "production" GitHub environment has a required reviewer). A failed /health here rolls back automatically.
+  deploy-production:
+    name: Production
+    needs: [build, deploy-staging]
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: production
+      image_tag: ${{ github.sha }}
+      expected_digest: ${{ needs.build.outputs.digest }}
+    secrets: inherit
+
+  # Below is the code to measure the run against the brief's Table 7 targets at the very end, and save the
+  # results as a file with the run (pipeline-report) and on the run's Summary page.
+  report:
+    name: Pipeline timings
+    needs: [test, build, deploy-development, deploy-testing, deploy-staging, deploy-production]
+    if: always() && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Measure this run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_DIGEST: ${{ needs.build.outputs.digest }}
+          DEV_DIGEST: ${{ needs.deploy-development.outputs.digest }}
+          TESTING_DIGEST: ${{ needs.deploy-testing.outputs.digest }}
+          STAGING_DIGEST: ${{ needs.deploy-staging.outputs.digest }}
+          PRODUCTION_DIGEST: ${{ needs.deploy-production.outputs.digest }}
+        run: bash scripts/pipeline-report.sh | tee pipeline-report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Save pipeline report
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-report
+          path: pipeline-report.md
+          retention-days: 30
