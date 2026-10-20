@@ -1,11 +1,25 @@
+# Below is the code to leave out files the app image does not need:
+# git history, workflows, docs, scripts and the Level 2 monitoring files.
 .git
 .github
 docs
 scripts
-.env
-.env.*
-*.md
-__pycache__
-.venv
 monitoring
 compose.monitoring.yaml
+*.md
+
+# Below is the code to make sure secret .env files can never be copied into the public image.
+.env
+.env.*
+
+# Below is the code to leave out Python caches, the virtual environment, and the tests and their reports.
+__pycache__
+.venv
+.ruff_cache
+.pytest_cache
+.coverage
+htmlcov
+test-results
+playwright-report
+tests
+requirements-dev.txt
