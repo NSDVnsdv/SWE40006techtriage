@@ -153,8 +153,33 @@ All runs: https://github.com/NSDVnsdv/SWE40006techtriage/actions/workflows/deplo
 
 - [x] D1 Live site http://3.232.71.71: Docker -> "Port is already allocated when starting a container" -> 4 numbered steps -> **Yes** -> "Thanks, your answer has been saved". Stats went from **0 to 1 session** (most common Docker, fix rate 100%), so the live database saved it
 - [x] D2 Testing, Staging and Production all answer `/health` with HTTP 200 and `"database": "connected"`, and `/version` shows the same commit `b2346bb05f2fbf5a70a1edd182589b7a95eca8f6`
-- [ ] D3 Restart the app container on Production and confirm the stats are still there (CloudShell command in the screenshot checklist notes below)
-- [ ] D4 Level 2 still works with the real app: new JSON lines in log group `/techtriage/production/app`, request and latency graphs filling in, Route 53 check healthy, all 7 alarms OK
+- [x] D3 App container restarted on Production through Systems Manager: **1 session before, 1 session after**, `/health` still `"database": "connected"`. `docker compose ps` showed the app freshly restarted on `b2346bb` while `db` kept running (healthy, port 5432 not published), and the data lives in the named volume `techtriage_pgdata`
+- [x] D4 Level 2 still works with the real app: CloudWatch counted **70 requests** in the 08:22 UTC 5-minute slot (the D1 run plus 60 page visits), so the new app's JSON log lines reach CloudWatch and the metric filters read them; **p95 latency 19.7 ms** (alarm at 500 ms); **memory used 38.3%** with PostgreSQL added (alarm at 80%); Route 53: **16 of 16 checkers "HTTP Status Code 200, OK"**; **all 7 alarms OK**
+
+D3 and D4 were run from AWS CloudShell in one paste:
+
+```
+cat > d3.json <<'EOF'
+{"commands": [
+  "cd /opt/techtriage",
+  "echo \"BEFORE restart: $(curl -s localhost/stats | grep -o 'total-sessions\">[0-9]*' | grep -o '[0-9]*$') sessions\"",
+  "docker compose restart app",
+  "sleep 20",
+  "docker compose ps",
+  "echo \"AFTER restart: $(curl -s localhost/stats | grep -o 'total-sessions\">[0-9]*' | grep -o '[0-9]*$') sessions\"",
+  "echo \"health: $(curl -s localhost/health)\"",
+  "echo \"database volume: $(docker volume ls -q | grep pgdata)\""
+]}
+EOF
+ID=$(aws ssm send-command --instance-ids i-05fa5eb69c835d120 --document-name AWS-RunShellScript --comment "TechTriage D3: restart app, data survives" --parameters file://d3.json --query Command.CommandId --output text); sleep 40
+aws ssm get-command-invocation --command-id "$ID" --instance-id i-05fa5eb69c835d120 --query '[Status, StandardOutputContent]' --output text
+aws cloudwatch get-metric-statistics --namespace TechTriage/Production --metric-name RequestCount --start-time $(date -u -d '-30 min' +%FT%TZ) --end-time $(date -u +%FT%TZ) --period 300 --statistics Sum --query 'sort_by(Datapoints,&Timestamp)[].[Timestamp,Sum]' --output text
+aws cloudwatch get-metric-statistics --namespace TechTriage/Production --metric-name RequestLatency --start-time $(date -u -d '-30 min' +%FT%TZ) --end-time $(date -u +%FT%TZ) --period 300 --extended-statistics p95 --query 'sort_by(Datapoints,&Timestamp)[].[Timestamp,ExtendedStatistics.p95]' --output text
+aws cloudwatch get-metric-statistics --namespace TechTriage/Production --metric-name mem_used_percent --dimensions Name=InstanceId,Value=i-05fa5eb69c835d120 --start-time $(date -u -d '-15 min' +%FT%TZ) --end-time $(date -u +%FT%TZ) --period 300 --statistics Maximum --query 'sort_by(Datapoints,&Timestamp)[-1].Maximum' --output text
+HC=$(aws route53 list-health-checks --query "HealthChecks[?HealthCheckConfig.IPAddress=='3.232.71.71'].Id | [0]" --output text)
+aws route53 get-health-check-status --health-check-id "$HC" --query 'HealthCheckObservations[].StatusReport.Status' --output text | tr '\t' '\n' | sort | uniq -c
+aws cloudwatch describe-alarms --alarm-name-prefix techtriage-prod --query 'MetricAlarms[].[AlarmName,StateValue]' --output table
+```
 
 ---
 
@@ -178,8 +203,8 @@ Save as `L3-<nn>-<name>.png` with the matching text as `.txt`.
 | 20-22 | Deploy runs #4 (staging), #5 (production), #6 (development) | deploy + verify logs | [ ] |
 | 23 | `/health` and `/version` from all 4 servers | page text | [ ] |
 | 24 | Production: full troubleshooting run, then the stats page (D1) | n/a | [ ] |
-| 25 | Production: app restart, `docker compose ps`, stats unchanged (D3) | CloudShell output | [ ] |
-| 26 | CloudWatch: app log group, dashboard, alarm list, Route 53 healthy (D4) | CloudShell output | [ ] |
+| 25 | Production: app restart, `docker compose ps`, stats unchanged (D3) (CloudShell output already taken) | CloudShell output | [x] |
+| 26 | CloudWatch: dashboard with the request/latency spike at 08:22 UTC, alarm list, Route 53 healthy (D4) (CloudShell output already taken; dashboard still to take) | CloudShell output | [ ] |
 | 27 | Deploy runs #1 and #2 (the two safe failures, for the error log) | the error lines | [ ] |
 
 ## Troubleshooting
